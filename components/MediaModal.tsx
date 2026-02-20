@@ -20,7 +20,8 @@ const MediaModal: React.FC<MediaModalProps> = ({ isOpen, onClose, onSave, initia
     type: 'Image' as const,
     duration: '15s',
     displayDays: 7,
-    mediaUrl: ''
+    mediaUrl: '',
+    ctaUrl: ''
   });
 
   useEffect(() => {
@@ -31,7 +32,8 @@ const MediaModal: React.FC<MediaModalProps> = ({ isOpen, onClose, onSave, initia
         type: initialData.type,
         duration: initialData.duration,
         displayDays: initialData.displayDays || 7,
-        mediaUrl: initialData.mediaUrl || ''
+        mediaUrl: initialData.mediaUrl || '',
+        ctaUrl: initialData.ctaUrl || ''
       });
       setUploadMethod(initialData.mediaUrl?.startsWith('data:') ? 'file' : 'url');
       setFilePreview(initialData.mediaUrl?.startsWith('data:') ? initialData.mediaUrl : null);
@@ -42,7 +44,8 @@ const MediaModal: React.FC<MediaModalProps> = ({ isOpen, onClose, onSave, initia
         type: 'Image',
         duration: '15s',
         displayDays: 7,
-        mediaUrl: ''
+        mediaUrl: '',
+        ctaUrl: ''
       });
       setUploadMethod('url');
       setFilePreview(null);
@@ -94,6 +97,7 @@ const MediaModal: React.FC<MediaModalProps> = ({ isOpen, onClose, onSave, initia
       duration: formData.duration,
       displayDays: formData.displayDays,
       mediaUrl: formData.mediaUrl,
+      ctaUrl: formData.ctaUrl,
       thumbnail: thumbnail
     });
     onClose();
@@ -249,6 +253,20 @@ const MediaModal: React.FC<MediaModalProps> = ({ isOpen, onClose, onSave, initia
                 onChange={(e) => setFormData({...formData, advertiser: e.target.value})}
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 px-2 flex items-center gap-2">
+              Link de Ação (QR Code)
+              <span className="text-blue-500 lowercase">(opcional - ex: site da oferta)</span>
+            </label>
+            <input 
+              type="url" 
+              placeholder="https://sua-loja.com/oferta"
+              className="w-full bg-[#161b22] border-none rounded-2xl p-4 text-sm focus:ring-2 focus:ring-blue-500 text-blue-400 font-mono"
+              value={formData.ctaUrl}
+              onChange={(e) => setFormData({...formData, ctaUrl: e.target.value})}
+            />
           </div>
 
           <div className="grid grid-cols-3 gap-4">

@@ -11,6 +11,7 @@ export interface PlaylistItem {
   status: 'Ativo' | 'Inativo';
   thumbnail: string;
   mediaUrl?: string; // Link direto para a imagem ou vídeo de alta qualidade
+  ctaUrl?: string; // Link para QR Code (opcional)
 }
 
 export interface WeatherData {
