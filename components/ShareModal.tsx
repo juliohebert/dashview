@@ -124,15 +124,18 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, playlist }) =>
           {/* Código Curto para Digitação */}
           <div className="bg-gradient-to-br from-blue-600/10 to-purple-600/10 border-2 border-blue-500/30 rounded-3xl p-6 text-center">
             <p className="text-[10px] text-blue-400 font-black uppercase tracking-widest mb-4">🎯 Digite na TV</p>
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <span className="text-gray-400 text-sm font-medium">{window.location.origin}/?id=</span>
-              <div className="bg-blue-600 px-6 py-3 rounded-2xl shadow-2xl shadow-blue-600/50 border-2 border-blue-400">
-                <span className="text-white text-3xl font-black tracking-[0.3em] font-mono">
-                  {shareUrl.split('id=')[1]?.split('#')[0] || '------'}
-                </span>
+            <div className="flex flex-col items-center gap-3 mb-2">
+              <div className="flex items-center justify-center gap-2 flex-wrap">
+                <span className="text-gray-400 text-sm font-medium">{window.location.origin}{window.location.pathname}?id=</span>
+                <div className="bg-blue-600 px-6 py-3 rounded-2xl shadow-2xl shadow-blue-600/50 border-2 border-blue-400">
+                  <span className="text-white text-3xl font-black tracking-[0.3em] font-mono">
+                    {shareUrl.split('id=')[1]?.split('#')[0] || '------'}
+                  </span>
+                </div>
+                <span className="text-gray-400 text-sm font-medium">#display</span>
               </div>
             </div>
-            <p className="text-xs text-gray-500 mt-3">Digite apenas os <span className="text-white font-bold">6 caracteres</span> destacados</p>
+            <p className="text-xs text-gray-500 mt-3">Digite o endereço completo ou copie o link abaixo</p>
           </div>
 
           <div className="space-y-4">
@@ -159,9 +162,12 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, playlist }) =>
                    <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 </div>
                 <div className="space-y-2.5">
-                   <p className="text-xs text-blue-400 font-black uppercase tracking-widest">✨ Link Compartilhável</p>
+                   <p className="text-xs text-blue-400 font-black uppercase tracking-widest">✨ Como Usar</p>
                    <p className="text-[10px] text-gray-500 font-medium leading-relaxed">
-                     O link foi otimizado com apenas <span className="text-white font-bold">6 caracteres</span> para facilitar a digitação na TV. Cole o link completo ou digite apenas o código destacado.
+                     <span className="text-white font-bold">1.</span> Escaneie o QR Code com o celular, ou<br/>
+                     <span className="text-white font-bold">2.</span> Copie o link completo abaixo, ou<br/>
+                     <span className="text-white font-bold">3.</span> Digite o endereço completo destacado acima na TV.<br/>
+                     <span className="text-blue-400 mt-2 block">O código tem apenas 6 caracteres para facilitar!</span>
                    </p>
                 </div>
              </div>
