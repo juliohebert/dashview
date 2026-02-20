@@ -8,6 +8,7 @@ import LivePreview from './LivePreview';
 import MediaModal from './MediaModal';
 import ShareModal from './ShareModal';
 import PlaylistTable from './PlaylistTable';
+import AnalyticsView from './AnalyticsView';
 
 interface DashboardViewProps {
   onViewChange: (v: ViewMode) => void;
@@ -23,6 +24,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onViewChange, playlist, s
   const [isReordering, setIsReordering] = useState(false);
   const [viewType, setViewType] = useState<'grid' | 'table'>('grid');
   const [editingItem, setEditingItem] = useState<PlaylistItem | null>(null);
+  const [activeSection, setActiveSection] = useState<'playlist' | 'analytics'>('playlist');
 
   const handleSaveMedia = (data: Omit<PlaylistItem, 'id' | 'status'> & { id?: string }) => {
     if (data.id) {
@@ -87,35 +89,50 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onViewChange, playlist, s
   return (
     <div className="flex h-full w-full bg-[#0b0e14]">
       <div className="hidden lg:block">
-        <Sidebar />
+        <Sidebar 
+          activeSection={activeSection} 
+          onSectionChange={setActiveSection}
+        />
       </div>
 
       <div className="flex-grow flex flex-col h-full overflow-hidden">
         
         {/* Header Desktop */}
         <header className="hidden lg:flex h-20 items-center justify-between px-8 border-b border-white/5 flex-shrink-0 bg-[#0d1117]/80 backdrop-blur-md sticky top-0 z-30">
-          <div className="relative w-96">
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-            <input 
-              type="text" 
-              placeholder="Buscar mídias..."
-              className="w-full bg-[#161b22] border-none rounded-2xl py-2.5 pl-11 pr-4 text-sm focus:ring-2 focus:ring-blue-500/50 transition-all placeholder:text-gray-600"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+          <div className="flex items-center gap-6">
+            {activeSection === 'playlist' && (
+              <div className="relative w-96">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+                <input 
+                  type="text" 
+                  placeholder="Buscar mídias..."
+                  className="w-full bg-[#161b22] border-none rounded-2xl py-2.5 pl-11 pr-4 text-sm focus:ring-2 focus:ring-blue-500/50 transition-all placeholder:text-gray-600"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+            )}
+            {activeSection === 'analytics' && (
+              <div>
+                <h1 className="text-2xl font-black text-white">Analytics & Insights</h1>
+                <p className="text-xs text-gray-500 font-semibold">Análise detalhada de performance</p>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-6">
-            <button 
-              onClick={() => { setEditingItem(null); setIsModalOpen(true); }}
-              className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2.5 rounded-2xl font-bold text-sm flex items-center gap-2 transition-all shadow-xl shadow-blue-500/20 active:scale-95"
-            >
-              + Nova Mídia
-            </button>
+            {activeSection === 'playlist' && (
+              <button 
+                onClick={() => { setEditingItem(null); setIsModalOpen(true); }}
+                className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2.5 rounded-2xl font-bold text-sm flex items-center gap-2 transition-all shadow-xl shadow-blue-500/20 active:scale-95"
+              >
+                + Nova Mídia
+              </button>
+            )}
             <div className="h-8 w-px bg-white/10 mx-2"></div>
             <div className="flex items-center gap-3">
               <div className="text-right">
@@ -146,7 +163,10 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onViewChange, playlist, s
         </header>
 
         <div className="flex-grow overflow-y-auto custom-scrollbar pb-32 lg:pb-8">
-          <main className="p-6 lg:p-8 space-y-8 max-w-[1600px] mx-auto w-full">
+          {activeSection === 'analytics' ? (
+            <AnalyticsView playlist={playlist} />
+          ) : (
+            <main className="p-6 lg:p-8 space-y-8 max-w-[1600px] mx-auto w-full">
             
             <section className="bg-[#161b22] rounded-3xl p-6 lg:p-8 border border-white/5 shadow-2xl overflow-hidden relative group">
               <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 blur-[60px] rounded-full" />
@@ -250,6 +270,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onViewChange, playlist, s
             </section>
 
           </main>
+          )}
         </div>
 
         <MediaModal 

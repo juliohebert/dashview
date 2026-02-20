@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { PlaylistItem } from '../types';
+import { PlaylistItem, Schedule } from '../types';
+import ScheduleEditor from './ScheduleEditor';
 
 interface MediaModalProps {
   isOpen: boolean;
@@ -24,6 +25,12 @@ const MediaModal: React.FC<MediaModalProps> = ({ isOpen, onClose, onSave, initia
     ctaUrl: ''
   });
 
+  const [schedule, setSchedule] = useState<Schedule>({
+    enabled: false,
+    daysOfWeek: [],
+    timeSlots: []
+  });
+
   useEffect(() => {
     if (initialData && isOpen) {
       setFormData({
@@ -34,6 +41,11 @@ const MediaModal: React.FC<MediaModalProps> = ({ isOpen, onClose, onSave, initia
         displayDays: initialData.displayDays || 7,
         mediaUrl: initialData.mediaUrl || '',
         ctaUrl: initialData.ctaUrl || ''
+      });
+      setSchedule(initialData.schedule || {
+        enabled: false,
+        daysOfWeek: [],
+        timeSlots: []
       });
       setUploadMethod(initialData.mediaUrl?.startsWith('data:') ? 'file' : 'url');
       setFilePreview(initialData.mediaUrl?.startsWith('data:') ? initialData.mediaUrl : null);
@@ -46,6 +58,11 @@ const MediaModal: React.FC<MediaModalProps> = ({ isOpen, onClose, onSave, initia
         displayDays: 7,
         mediaUrl: '',
         ctaUrl: ''
+      });
+      setSchedule({
+        enabled: false,
+        daysOfWeek: [],
+        timeSlots: []
       });
       setUploadMethod('url');
       setFilePreview(null);
@@ -98,7 +115,8 @@ const MediaModal: React.FC<MediaModalProps> = ({ isOpen, onClose, onSave, initia
       displayDays: formData.displayDays,
       mediaUrl: formData.mediaUrl,
       ctaUrl: formData.ctaUrl,
-      thumbnail: thumbnail
+      thumbnail: thumbnail,
+      schedule: schedule
     });
     onClose();
   };
@@ -314,6 +332,9 @@ const MediaModal: React.FC<MediaModalProps> = ({ isOpen, onClose, onSave, initia
               </div>
             </div>
           </div>
+
+          {/* Schedule Editor */}
+          <ScheduleEditor schedule={schedule} onChange={setSchedule} />
 
           <button 
             type="submit"

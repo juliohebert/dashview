@@ -27,9 +27,46 @@ const DisplayView: React.FC<DisplayViewProps> = ({ playlist = [] }) => {
   const [progress, setProgress] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
 
+  // Função para verificar se uma mídia deve ser exibida baseado no agendamento
+  const isMediaScheduledNow = (item: PlaylistItem): boolean => {
+    // Se não tem schedule ou schedule não está habilitado, sempre exibir
+    if (!item.schedule || !item.schedule.enabled) {
+      return true;
+    }
+
+    const now = new Date();
+    const currentDay = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const currentTime = now.getHours() * 60 + now.getMinutes(); // Minutos desde meia-noite
+
+    // Verifica se está no dia da semana correto
+    if (item.schedule.daysOfWeek.length > 0 && !item.schedule.daysOfWeek.includes(currentDay)) {
+      return false;
+    }
+
+    // Verifica se está em algum time slot
+    if (item.schedule.timeSlots.length > 0) {
+      const isInTimeSlot = item.schedule.timeSlots.some(slot => {
+        const [startHour, startMin] = slot.start.split(':').map(Number);
+        const [endHour, endMin] = slot.end.split(':').map(Number);
+        const startTime = startHour * 60 + startMin;
+        const endTime = endHour * 60 + endMin;
+        
+        return currentTime >= startTime && currentTime <= endTime;
+      });
+
+      if (!isInTimeSlot) {
+        return false;
+      }
+    }
+
+    return true;
+  };
+
   const activeItems = useMemo(() => 
-    playlist.filter(item => item.status === 'Ativo'),
-  [playlist]);
+    playlist
+      .filter(item => item.status === 'Ativo')
+      .filter(item => isMediaScheduledNow(item)),
+  [playlist, time]); // Incluir 'time' para reavaliar a cada minuto
 
   const currentItem = activeItems[currentIndex];
   const nextItem = activeItems[(currentIndex + 1) % activeItems.length];

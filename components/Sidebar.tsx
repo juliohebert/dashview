@@ -1,13 +1,25 @@
 
 import React from 'react';
 
-const Sidebar: React.FC = () => {
+interface SidebarProps {
+  activeSection: 'playlist' | 'analytics';
+  onSectionChange: (section: 'playlist' | 'analytics') => void;
+}
+
+const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => {
   const menuItems = [
-    { icon: <path d="M4 6h16M4 12h16m-7 6h7" />, label: 'Dashboard', active: true },
-    { icon: <path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />, label: 'Playlists Ativas', active: false },
-    { icon: <path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />, label: 'Gestão de Mídia', active: false },
-    { icon: <path d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />, label: 'Monitorar Telas', active: false },
-    { icon: <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />, label: 'Configurações', active: false },
+    { 
+      id: 'playlist' as const,
+      icon: <path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />, 
+      label: 'Gestão de Playlist',
+      emoji: '📋'
+    },
+    { 
+      id: 'analytics' as const,
+      icon: <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />, 
+      label: 'Analytics & Insights',
+      emoji: '📊'
+    },
   ];
 
   return (
@@ -25,21 +37,35 @@ const Sidebar: React.FC = () => {
       </div>
 
       <nav className="flex-grow px-4 space-y-2 overflow-y-auto custom-scrollbar">
-        {menuItems.map((item, idx) => (
+        {menuItems.map((item) => (
           <button
-            key={idx}
+            key={item.id}
+            onClick={() => onSectionChange(item.id)}
             className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl transition-all group ${
-              item.active 
+              activeSection === item.id
                 ? 'bg-blue-600 text-white shadow-xl shadow-blue-500/10' 
                 : 'text-gray-500 hover:bg-[#161b22] hover:text-white'
             }`}
           >
-            <svg className={`w-5 h-5 transition-colors ${item.active ? 'text-white' : 'text-gray-500 group-hover:text-blue-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              {item.icon}
-            </svg>
-            <span className="font-bold text-sm tracking-tight">{item.label}</span>
+            <div className="flex items-center gap-3 flex-1">
+              <svg className={`w-5 h-5 transition-colors ${activeSection === item.id ? 'text-white' : 'text-gray-500 group-hover:text-blue-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                {item.icon}
+              </svg>
+              <span className="font-bold text-sm tracking-tight">{item.label}</span>
+            </div>
+            <span className="text-lg">{item.emoji}</span>
           </button>
         ))}
+        
+        {/* Divider */}
+        <div className="py-2">
+          <div className="h-px bg-white/5"></div>
+        </div>
+        
+        {/* Placeholder para futuras funcionalidades */}
+        <div className="px-6 py-4 rounded-2xl bg-[#161b22]/50 border border-white/5 border-dashed">
+          <p className="text-xs text-gray-600 font-bold text-center">Mais recursos em breve...</p>
+        </div>
       </nav>
 
       <div className="p-4 mt-auto">

@@ -11,9 +11,47 @@ interface ShareModalProps {
 const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, playlist }) => {
   const [copied, setCopied] = useState(false);
 
+  // Limpar playlists antigas (mais de 30 dias) do localStorage
+  const cleanOldPlaylists = () => {
+    const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+    const keys = Object.keys(localStorage);
+    
+    keys.forEach(key => {
+      if (key.startsWith('playlist_') && key.endsWith('_created')) {
+        const timestamp = parseInt(localStorage.getItem(key) || '0');
+        if (timestamp < thirtyDaysAgo) {
+          const playlistId = key.replace('_created', '');
+          localStorage.removeItem(playlistId);
+          localStorage.removeItem(key);
+          console.log(`Playlist antiga removida: ${playlistId}`);
+        }
+      }
+    });
+  };
+
+  // Função para gerar ID curto (6 caracteres alfanuméricos)
+  const generateShortId = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Sem I, O, 0, 1 para evitar confusão
+    let id = '';
+    for (let i = 0; i < 6; i++) {
+      id += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return id;
+  };
+
   const shareUrl = useMemo(() => {
+    // Limpa playlists antigas antes de criar uma nova
+    cleanOldPlaylists();
     try {
-      // Filtra apenas itens ativos ou essenciais para reduzir o tamanho da URL
+      // Gera um ID curto único
+      let shortId = generateShortId();
+      
+      // Verifica se já existe, se sim, gera outro
+      while (localStorage.getItem(`playlist_${shortId}`)) {
+        shortId = generateShortId();
+      }
+
+      // Filtra apenas itens ativos ou essenciais
       const compactPlaylist = playlist.map(item => ({
         id: item.id,
         title: item.title,
@@ -22,43 +60,31 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, playlist }) =>
         duration: item.duration,
         status: item.status,
         mediaUrl: item.mediaUrl,
-        thumbnail: item.thumbnail
+        thumbnail: item.thumbnail,
+        schedule: item.schedule
       }));
 
-      const jsonString = JSON.stringify(compactPlaylist);
+      // Armazena a playlist no localStorage com o ID
+      localStorage.setItem(`playlist_${shortId}`, JSON.stringify(compactPlaylist));
       
-      // Codificação robusta Unicode -> Base64 URL-Safe
-      const bytes = new TextEncoder().encode(jsonString);
-      let binary = '';
-      const len = bytes.byteLength;
-      for (let i = 0; i < len; i++) {
-        binary += String.fromCharCode(bytes[i]);
-      }
-      
-      const base64 = btoa(binary)
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=+$/, ''); // Remove padding para encurtar URL
+      // Timestamp para expiração (opcional - 30 dias)
+      localStorage.setItem(`playlist_${shortId}_created`, Date.now().toString());
       
       const baseUrl = window.location.origin + window.location.pathname;
-      const url = `${baseUrl}?p=${base64}#display`;
-      
-      // Limite técnico para URLs estáveis em browsers antigos (Smart TVs)
-      if (url.length > 7000) throw new Error("URL_TOO_LONG");
+      const url = `${baseUrl}?id=${shortId}#display`;
       
       return url;
     } catch (e) {
       console.error("Erro na geração do link:", e);
-      return "URL_TOO_LONG";
+      return `${window.location.origin}${window.location.pathname}#display`;
     }
   }, [playlist]);
 
-  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(shareUrl === "URL_TOO_LONG" ? "ERRO_TAMANHO" : shareUrl)}`;
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(shareUrl)}`;
 
   if (!isOpen) return null;
 
   const handleCopy = () => {
-    if (shareUrl === "URL_TOO_LONG") return;
     navigator.clipboard.writeText(shareUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -93,16 +119,7 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, playlist }) =>
             <div className="relative group">
               <div className="absolute -inset-6 bg-blue-600/10 blur-[50px] rounded-full animate-pulse" />
               <div className="relative p-7 bg-white rounded-[44px] shadow-2xl transition-transform hover:scale-[1.03] duration-500 cursor-none">
-                 {shareUrl === "URL_TOO_LONG" ? (
-                   <div className="w-[200px] h-[200px] flex items-center justify-center text-center p-6 bg-red-50 rounded-3xl">
-                     <p className="text-black text-[10px] font-bold leading-relaxed">
-                       <span className="text-red-600 font-black text-xs uppercase block mb-2">Playlist Excedida!</span>
-                       Remova arquivos carregados localmente (Upload Manual) e utilize apenas <span className="text-blue-600">Links Diretos de URL</span> para compartilhar com a TV.
-                     </p>
-                   </div>
-                 ) : (
-                   <img src={qrCodeUrl} alt="QR Code Acesso TV" className="w-[200px] h-[200px] select-none" />
-                 )}
+                 <img src={qrCodeUrl} alt="QR Code Acesso TV" className="w-[200px] h-[200px] select-none" />
                  <div className="absolute -bottom-4 -right-4 bg-[#0d1117] p-2 rounded-2xl border border-white/10">
                     <div className="bg-blue-600 w-12 h-12 rounded-xl flex items-center justify-center shadow-xl">
                       <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -114,9 +131,7 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, playlist }) =>
             </div>
             <div className="text-center space-y-2">
                <p className="text-gray-400 text-sm font-medium">Escaneie para abrir o player na sua <span className="text-white font-bold tracking-tight">Smart TV</span>.</p>
-               {shareUrl !== "URL_TOO_LONG" && (
-                 <p className="text-[9px] text-gray-600 font-black uppercase tracking-[0.2em]">Link Gerado com Sucesso</p>
-               )}
+               <p className="text-[9px] text-green-500 font-black uppercase tracking-[0.2em]">Link Curto • Fácil Digitação</p>
             </div>
           </div>
 
@@ -128,13 +143,12 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, playlist }) =>
                 <input 
                   readOnly
                   type="text" 
-                  value={shareUrl === "URL_TOO_LONG" ? "Erro: Conteúdo local detectado" : shareUrl}
-                  className={`w-full bg-[#161b22] border rounded-2xl py-5 pl-14 pr-36 text-[10px] font-mono transition-all cursor-default ${shareUrl === "URL_TOO_LONG" ? 'border-red-500/30 text-red-400' : 'border-white/5 text-gray-500 focus:ring-2 focus:ring-blue-500/50'}`}
+                  value={shareUrl}
+                  className="w-full bg-[#161b22] border border-white/5 rounded-2xl py-5 pl-14 pr-36 text-xs font-mono transition-all cursor-default text-blue-400 focus:ring-2 focus:ring-blue-500/50"
                 />
                 <button 
-                  disabled={shareUrl === "URL_TOO_LONG"}
                   onClick={handleCopy}
-                  className={`absolute right-2.5 px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 ${copied ? 'bg-green-600 text-white' : 'bg-blue-600 text-white hover:bg-blue-500 shadow-xl shadow-blue-600/30'} disabled:opacity-30`}
+                  className={`absolute right-2.5 px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 ${copied ? 'bg-green-600 text-white' : 'bg-blue-600 text-white hover:bg-blue-500 shadow-xl shadow-blue-600/30'}`}
                 >
                   {copied ? 'Copiado' : 'Copiar Link'}
                 </button>
@@ -144,11 +158,17 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, playlist }) =>
                 <div className="w-10 h-10 rounded-2xl bg-blue-600/10 flex items-center justify-center shrink-0 border border-blue-500/10">
                    <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 </div>
-                <div className="space-y-1">
-                   <p className="text-xs text-blue-400 font-black uppercase tracking-widest">Guia de Instalação</p>
+                <div className="space-y-2.5">
+                   <p className="text-xs text-blue-400 font-black uppercase tracking-widest">✨ Link Curto Ativado</p>
                    <p className="text-[10px] text-gray-500 font-medium leading-relaxed">
-                     Para TVs, recomendamos o uso de links diretos (URL) nas mídias. O modo "Upload Manual" armazena dados no navegador local, o que impede o compartilhamento via link.
+                     O link foi otimizado com apenas <span className="text-white font-bold">6 caracteres</span> para facilitar a digitação na TV. A playlist fica armazenada localmente no navegador de onde foi compartilhada.
                    </p>
+                   <div className="bg-[#0d1117] rounded-xl p-3 border border-white/5 mt-2">
+                     <p className="text-[9px] text-gray-600 font-bold uppercase tracking-wider mb-1">Exemplo de Link Curto:</p>
+                     <p className="text-xs text-green-500 font-mono font-bold">
+                       {window.location.origin}/?id=<span className="text-white bg-green-600/20 px-1.5 py-0.5 rounded">ABC123</span>
+                     </p>
+                   </div>
                 </div>
              </div>
           </div>

@@ -15,8 +15,25 @@ const App: React.FC = () => {
   
   const getInitialPlaylist = useCallback((): PlaylistItem[] => {
     const params = new URLSearchParams(window.location.search);
-    const encodedData = params.get('p');
     
+    // Método 1: Link curto com ID
+    const shortId = params.get('id');
+    if (shortId) {
+      try {
+        const storedPlaylist = localStorage.getItem(`playlist_${shortId}`);
+        if (storedPlaylist) {
+          console.log(`Carregando playlist do link curto: ${shortId}`);
+          return JSON.parse(storedPlaylist);
+        } else {
+          console.warn(`Playlist não encontrada para ID: ${shortId}`);
+        }
+      } catch (e) {
+        console.error("Erro ao carregar playlist do link curto:", e);
+      }
+    }
+    
+    // Método 2: Link longo com base64 (compatibilidade com links antigos)
+    const encodedData = params.get('p');
     if (encodedData) {
       try {
         const normalizedBase64 = encodedData.replace(/-/g, '+').replace(/_/g, '/');
@@ -33,6 +50,7 @@ const App: React.FC = () => {
       }
     }
 
+    // Método 3: localStorage padrão
     const saved = localStorage.getItem('dashview_playlist');
     if (saved) {
       try {
