@@ -64,13 +64,13 @@ const MobileMediaCard: React.FC<MobileMediaCardProps> = ({
       </div>
 
       {!isReorderMode && (
-        <div className="flex gap-2">
+        <div className="flex gap-2 relative z-10">
           <button 
             onClick={(e) => {
               e.stopPropagation();
               onDeleteClick?.();
             }}
-            className="w-10 h-10 rounded-xl flex items-center justify-center bg-red-500/10 text-red-500 border border-red-500/20"
+            className="w-10 h-10 rounded-xl flex items-center justify-center bg-red-500/10 text-red-500 border border-red-500/20 cursor-pointer"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -81,7 +81,7 @@ const MobileMediaCard: React.FC<MobileMediaCardProps> = ({
               e.stopPropagation();
               onToggleStatus(item.id);
             }}
-            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
               isActive 
                 ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20' 
                 : 'bg-green-500/10 text-green-500 border border-green-500/20'

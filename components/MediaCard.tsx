@@ -71,12 +71,15 @@ const MediaCard: React.FC<MediaCardProps> = ({ item, isReorderMode, order, onOrd
             {item.status}
           </span>
           
-          <div className="flex gap-2">
+          <div className="flex gap-2 relative z-10">
             {!isReorderMode && (
               <>
                 <button 
-                  onClick={onEditClick}
-                  className="p-2 text-gray-500 hover:text-white hover:bg-white/5 rounded-lg transition-all"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEditClick?.();
+                  }}
+                  className="p-2 text-gray-500 hover:text-white hover:bg-white/5 rounded-lg transition-all cursor-pointer"
                   title="Editar"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -84,8 +87,11 @@ const MediaCard: React.FC<MediaCardProps> = ({ item, isReorderMode, order, onOrd
                   </svg>
                 </button>
                 <button 
-                  onClick={onDeleteClick}
-                  className="p-2 text-gray-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteClick?.();
+                  }}
+                  className="p-2 text-gray-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all cursor-pointer"
                   title="Excluir"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

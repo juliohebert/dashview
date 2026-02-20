@@ -1,7 +1,5 @@
 {
   "name": "DashView Signage Manager",
-  "description": "A professional digital signage management system and display dashboard featuring real-time updates, content scheduling, and AI-powered content assistance.",
-  "requestFramePermissions": [
-    "geolocation"
-  ]
+  "description": "A professional digital signage management system and display dashboard featuring real-time updates and content scheduling.",
+  "requestFramePermissions": []
 }

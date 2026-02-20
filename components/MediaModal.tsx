@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { PlaylistItem } from '../types';
-import { generateContentSuggestion } from '../services/geminiService';
 
 interface MediaModalProps {
   isOpen: boolean;
@@ -11,7 +10,6 @@ interface MediaModalProps {
 }
 
 const MediaModal: React.FC<MediaModalProps> = ({ isOpen, onClose, onSave, initialData }) => {
-  const [loading, setLoading] = useState(false);
   const [uploadMethod, setUploadMethod] = useState<'url' | 'file'>('url');
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -22,7 +20,6 @@ const MediaModal: React.FC<MediaModalProps> = ({ isOpen, onClose, onSave, initia
     type: 'Image' as const,
     duration: '15s',
     displayDays: 7,
-    category: '',
     mediaUrl: ''
   });
 
@@ -34,7 +31,6 @@ const MediaModal: React.FC<MediaModalProps> = ({ isOpen, onClose, onSave, initia
         type: initialData.type,
         duration: initialData.duration,
         displayDays: initialData.displayDays || 7,
-        category: '',
         mediaUrl: initialData.mediaUrl || ''
       });
       setUploadMethod(initialData.mediaUrl?.startsWith('data:') ? 'file' : 'url');
@@ -46,7 +42,6 @@ const MediaModal: React.FC<MediaModalProps> = ({ isOpen, onClose, onSave, initia
         type: 'Image',
         duration: '15s',
         displayDays: 7,
-        category: '',
         mediaUrl: ''
       });
       setUploadMethod('url');
@@ -69,22 +64,28 @@ const MediaModal: React.FC<MediaModalProps> = ({ isOpen, onClose, onSave, initia
     }
   };
 
-  const handleAiSuggest = async () => {
-    if (!formData.category) return;
-    setLoading(true);
-    const suggestion = await generateContentSuggestion(formData.category);
-    if (suggestion) {
-      setFormData(prev => ({
-        ...prev,
-        title: suggestion.title,
-        advertiser: 'Anunciante DashView'
-      }));
-    }
-    setLoading(false);
+  const getYouTubeId = (url: string) => {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+  };
+
+  const handleUrlChange = (url: string) => {
+    const ytId = getYouTubeId(url);
+    setFormData({
+      ...formData,
+      mediaUrl: url,
+      type: ytId ? 'Video' : formData.type
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const ytId = getYouTubeId(formData.mediaUrl);
+    const thumbnail = ytId 
+      ? `https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`
+      : (formData.mediaUrl || initialData?.thumbnail || `https://picsum.photos/seed/${Date.now()}/800/450`);
+
     onSave({
       id: initialData?.id,
       title: formData.title,
@@ -93,7 +94,7 @@ const MediaModal: React.FC<MediaModalProps> = ({ isOpen, onClose, onSave, initia
       duration: formData.duration,
       displayDays: formData.displayDays,
       mediaUrl: formData.mediaUrl,
-      thumbnail: formData.mediaUrl || initialData?.thumbnail || `https://picsum.photos/seed/${Date.now()}/800/450`
+      thumbnail: thumbnail
     });
     onClose();
   };
@@ -145,7 +146,7 @@ const MediaModal: React.FC<MediaModalProps> = ({ isOpen, onClose, onSave, initia
                 placeholder="https://exemplo.com/midia-4k.mp4"
                 className="w-full bg-[#161b22] border-none rounded-2xl p-4 text-sm focus:ring-2 focus:ring-blue-500 text-blue-400 font-mono"
                 value={formData.mediaUrl}
-                onChange={(e) => setFormData({...formData, mediaUrl: e.target.value})}
+                onChange={(e) => handleUrlChange(e.target.value)}
               />
               <p className="text-[9px] text-gray-500 px-2 leading-relaxed">
                 <span className="text-blue-500 font-black">Dica:</span> Use links diretos para garantir que a TV exiba o conteúdo em 4K/HD sem perdas de compressão.
@@ -188,31 +189,6 @@ const MediaModal: React.FC<MediaModalProps> = ({ isOpen, onClose, onSave, initia
                   onChange={handleFileChange}
                 />
               </div>
-            </div>
-          )}
-
-          {!isEdit && uploadMethod === 'url' && (
-            <div className="bg-blue-600/5 border border-blue-500/20 p-6 rounded-3xl space-y-3">
-               <label className="text-[10px] font-black uppercase tracking-widest text-blue-400 flex items-center gap-2">
-                 Assistente Criativo Gemini ✨
-               </label>
-               <div className="flex gap-2">
-                  <input 
-                    type="text" 
-                    placeholder="Ex: Promoção de Pizzaria Artesanal"
-                    className="flex-grow bg-[#161b22] border-none rounded-xl text-sm focus:ring-2 focus:ring-blue-500 placeholder:text-gray-600 h-12 px-4"
-                    value={formData.category}
-                    onChange={(e) => setFormData({...formData, category: e.target.value})}
-                  />
-                  <button 
-                    type="button"
-                    onClick={handleAiSuggest}
-                    disabled={loading || !formData.category}
-                    className="bg-blue-600 px-6 rounded-xl text-white font-bold text-xs hover:bg-blue-500 transition-all disabled:opacity-50"
-                  >
-                    {loading ? '...' : 'Sugerir'}
-                  </button>
-               </div>
             </div>
           )}
 

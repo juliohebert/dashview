@@ -7,6 +7,7 @@ import MobileMediaCard from './MobileMediaCard';
 import LivePreview from './LivePreview';
 import MediaModal from './MediaModal';
 import ShareModal from './ShareModal';
+import PlaylistTable from './PlaylistTable';
 
 interface DashboardViewProps {
   onViewChange: (v: ViewMode) => void;
@@ -20,6 +21,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onViewChange, playlist, s
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isReordering, setIsReordering] = useState(false);
+  const [viewType, setViewType] = useState<'grid' | 'table'>('grid');
   const [editingItem, setEditingItem] = useState<PlaylistItem | null>(null);
 
   const handleSaveMedia = (data: Omit<PlaylistItem, 'id' | 'status'> & { id?: string }) => {
@@ -47,9 +49,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onViewChange, playlist, s
   };
 
   const handleDeleteClick = (id: string) => {
-    if (window.confirm('Tem certeza que deseja excluir esta mídia? Ela será removida de todas as telas.')) {
-      setPlaylist(prev => prev.filter(item => item.id !== id));
-    }
+    setPlaylist(prev => prev.filter(item => item.id !== id));
+    
+    // Feedback visual opcional
+    setIsUploading(true);
+    setTimeout(() => setIsUploading(false), 2000);
   };
 
   const toggleStatus = (id: string) => {
@@ -196,24 +200,53 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onViewChange, playlist, s
               </div>
             </section>
 
-            {/* Grid Desktop */}
+            {/* Grid/Table Desktop */}
             <section className="hidden lg:block space-y-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-3xl font-black tracking-tight">Gestão de Conteúdo</h2>
+                <div className="flex bg-[#161b22] p-1 rounded-xl border border-white/5">
+                  <button 
+                    onClick={() => setViewType('grid')}
+                    className={`p-2 rounded-lg transition-all ${viewType === 'grid' ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}
+                    title="Visualização em Grade"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </button>
+                  <button 
+                    onClick={() => setViewType('table')}
+                    className={`p-2 rounded-lg transition-all ${viewType === 'table' ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}
+                    title="Visualização em Tabela"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path d="M4 6h16M4 10h16M4 14h16M4 18h16" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </button>
+                </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {filteredPlaylist.map((item, index) => (
-                  <MediaCard 
-                    key={item.id} 
-                    item={item} 
-                    isReorderMode={isReordering}
-                    order={index + 1}
-                    onOrderChange={(newOrder) => updateItemOrder(item.id, newOrder)}
-                    onEditClick={() => handleEditClick(item)}
-                    onDeleteClick={() => handleDeleteClick(item.id)}
-                  />
-                ))}
-              </div>
+
+              {viewType === 'grid' ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {filteredPlaylist.map((item, index) => (
+                    <MediaCard 
+                      key={item.id} 
+                      item={item} 
+                      isReorderMode={isReordering}
+                      order={index + 1}
+                      onOrderChange={(newOrder) => updateItemOrder(item.id, newOrder)}
+                      onEditClick={() => handleEditClick(item)}
+                      onDeleteClick={() => handleDeleteClick(item.id)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <PlaylistTable 
+                  items={filteredPlaylist} 
+                  onEdit={handleEditClick}
+                  onDelete={handleDeleteClick}
+                />
+              )}
             </section>
 
           </main>

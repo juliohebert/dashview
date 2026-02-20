@@ -92,6 +92,13 @@ const DisplayView: React.FC<DisplayViewProps> = ({ playlist = [] }) => {
     );
   }
 
+  const getYouTubeId = (url: string) => {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+  };
+
+  const youtubeId = currentItem?.mediaUrl ? getYouTubeId(currentItem.mediaUrl) : null;
   const isVideo = currentItem?.type === 'Video' || currentItem?.mediaUrl?.toLowerCase().endsWith('.mp4');
 
   return (
@@ -99,7 +106,15 @@ const DisplayView: React.FC<DisplayViewProps> = ({ playlist = [] }) => {
       
       <main className="relative flex-grow h-full bg-black overflow-hidden border-b lg:border-b-0 lg:border-r border-white/10">
         <div className={`w-full h-full transition-all duration-[1200ms] ease-out ${fade ? 'opacity-100 scale-100' : 'opacity-0 scale-105 blur-lg'}`}>
-          {isVideo ? (
+          {youtubeId ? (
+            <iframe
+              key={youtubeId}
+              src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${youtubeId}&modestbranding=1&rel=0`}
+              className="w-full h-full border-none"
+              allow="autoplay; encrypted-media"
+              allowFullScreen
+            />
+          ) : isVideo ? (
             <video 
               key={currentItem.mediaUrl} 
               ref={videoRef} 
