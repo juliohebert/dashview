@@ -11,6 +11,10 @@
   ],
   "routes": [
     {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
       "handle": "filesystem"
     },
     {
@@ -19,6 +23,6 @@
     }
   ],
   "env": {
-    "VITE_DATABASE_URL": "@database_url"
+    "DATABASE_URL": "@database_url"
   }
 }

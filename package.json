@@ -13,7 +13,9 @@
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",
+    "cors": "^2.8.6",
     "dotenv": "^17.3.1",
+    "express": "^5.2.1",
     "lucide-react": "^0.575.0",
     "motion": "^12.34.3",
     "pg": "^8.18.0",
@@ -22,6 +24,8 @@
     "recharts": "^3.7.0"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
     "@types/node": "^22.14.0",
     "@types/pg": "^8.16.0",
     "@vercel/node": "^5.6.6",
