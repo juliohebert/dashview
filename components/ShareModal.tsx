@@ -76,9 +76,29 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, playlist }) =>
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    console.log('Backdrop clicked', e.target === e.currentTarget);
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
+  const handleCloseClick = (e: React.MouseEvent) => {
+    console.log('Close button clicked');
+    alert('Botão de fechar foi clicado! Fechando a modal...');
+    e.stopPropagation();
+    onClose();
+  };
+
   return (
-    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/95 backdrop-blur-xl animate-in fade-in duration-300">
-      <div className="bg-[#0d1117] w-full max-w-lg rounded-[48px] border border-white/10 shadow-[0_0_150px_rgba(37,99,235,0.2)] overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
+    <div 
+      onClick={handleBackdropClick}
+      className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/95 backdrop-blur-xl animate-in fade-in duration-300"
+    >
+      <div 
+        onClick={(e) => e.stopPropagation()}
+        className="bg-[#0d1117] w-full max-w-lg rounded-[48px] border border-white/10 shadow-[0_0_150px_rgba(37,99,235,0.2)] overflow-hidden flex flex-col animate-in zoom-in-95 duration-300"
+      >
         
         <div className="p-10 pb-6 flex items-start justify-between bg-gradient-to-b from-blue-600/5 to-transparent">
           <div className="space-y-1">
@@ -94,7 +114,11 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, playlist }) =>
                </div>
             </div>
           </div>
-          <button onClick={onClose} className="p-3 hover:bg-white/10 rounded-full text-gray-500 hover:text-white transition-all active:scale-90">
+          <button 
+            type="button"
+            onClick={handleCloseClick} 
+            className="p-3 hover:bg-white/10 rounded-full text-gray-500 hover:text-white transition-all active:scale-90"
+          >
             <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
           </button>
         </div>
@@ -150,6 +174,7 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, playlist }) =>
                   className="w-full bg-[#161b22] border border-white/10 rounded-2xl py-6 pl-16 pr-36 text-sm font-mono transition-all cursor-text select-all text-white focus:ring-2 focus:ring-blue-500/50"
                 />
                 <button 
+                  type="button"
                   onClick={handleCopy}
                   className={`absolute right-2.5 px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 ${copied ? 'bg-green-600 text-white' : 'bg-blue-600 text-white hover:bg-blue-500 shadow-xl shadow-blue-600/30'}`}
                 >
@@ -176,7 +201,8 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, playlist }) =>
 
         <div className="bg-[#161b22]/40 p-8 flex justify-center border-t border-white/5">
            <button 
-             onClick={onClose}
+             type="button"
+             onClick={handleCloseClick}
              className="text-gray-600 hover:text-white text-[10px] font-black uppercase tracking-[0.5em] transition-all"
            >
              Fechar Painel
