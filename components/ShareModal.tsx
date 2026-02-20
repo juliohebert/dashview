@@ -14,12 +14,36 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, playlist }) =>
   const [shareUrl, setShareUrl] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
 
+  // Debug: verificar props ao montar
+  useEffect(() => {
+    console.log('🎬 ShareModal montado com props:', { 
+      isOpen, 
+      onCloseType: typeof onClose,
+      playlistLength: playlist?.length 
+    });
+  }, []);
+
   // Gera o link compartilhável ao abrir o modal
   useEffect(() => {
     if (isOpen && !shareUrl) {
       generateShareLink();
     }
   }, [isOpen]);
+
+  // Fechar com tecla ESC
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        console.log('⌨️ ESC pressionado! Chamando onClose()');
+        onClose();
+      }
+    };
+    
+    if (isOpen) {
+      window.addEventListener('keydown', handleEsc);
+      return () => window.removeEventListener('keydown', handleEsc);
+    }
+  }, [isOpen, onClose]);
 
   // Função para gerar ID curto (6 caracteres alfanuméricos)
   const generateShortId = () => {
@@ -83,28 +107,41 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, playlist }) =>
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    console.log('Backdrop clicked', e.target === e.currentTarget);
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    console.log('🎯 Backdrop clicked!', e.target, e.currentTarget, e.target === e.currentTarget);
     if (e.target === e.currentTarget) {
+      console.log('✅ Chamando onClose()');
       onClose();
+    } else {
+      console.log('❌ Não é backdrop direto');
     }
   };
 
-  const handleCloseClick = (e: React.MouseEvent) => {
-    console.log('Close button clicked');
-    alert('Botão de fechar foi clicado! Fechando a modal...');
-    e.stopPropagation();
-    onClose();
+  const handleCloseClick = () => {
+    console.log('🔴 Close button clicked! Chamando onClose()');
+    console.log('🔍 onClose type:', typeof onClose);
+    console.log('🔍 onClose value:', onClose);
+    if (typeof onClose === 'function') {
+      onClose();
+      console.log('✅ onClose() executado!');
+    } else {
+      console.error('❌ onClose não é uma função!');
+    }
   };
 
   return (
     <div 
       onClick={handleBackdropClick}
-      className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/95 backdrop-blur-xl animate-in fade-in duration-300"
+      className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/95 backdrop-blur-xl pointer-events-auto"
+      style={{ animation: 'fadeIn 0.3s ease-in-out' }}
     >
       <div 
-        onClick={(e) => e.stopPropagation()}
-        className="bg-[#0d1117] w-full max-w-lg rounded-[48px] border border-white/10 shadow-[0_0_150px_rgba(37,99,235,0.2)] overflow-hidden flex flex-col animate-in zoom-in-95 duration-300"
+        onClick={(e) => { 
+          console.log('📦 Content div clicked, stopping propagation'); 
+          e.stopPropagation(); 
+        }}
+        className="bg-[#0d1117] w-full max-w-lg rounded-[48px] border border-white/10 shadow-[0_0_150px_rgba(37,99,235,0.2)] overflow-hidden flex flex-col pointer-events-auto"
+        style={{ animation: 'zoomIn 0.3s ease-in-out' }}
       >
         
         <div className="p-10 pb-6 flex items-start justify-between bg-gradient-to-b from-blue-600/5 to-transparent">
@@ -123,8 +160,13 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, playlist }) =>
           </div>
           <button 
             type="button"
-            onClick={handleCloseClick} 
-            className="p-3 hover:bg-white/10 rounded-full text-gray-500 hover:text-white transition-all active:scale-90"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('❌ X button clicked!');
+              handleCloseClick();
+            }}
+            className="p-3 hover:bg-white/10 rounded-full text-gray-500 hover:text-white transition-all active:scale-90 cursor-pointer pointer-events-auto"
           >
             <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
           </button>
@@ -209,8 +251,13 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, playlist }) =>
         <div className="bg-[#161b22]/40 p-8 flex justify-center border-t border-white/5">
            <button 
              type="button"
-             onClick={handleCloseClick}
-             className="text-gray-600 hover:text-white text-[10px] font-black uppercase tracking-[0.5em] transition-all"
+             onClick={(e) => {
+               e.preventDefault();
+               e.stopPropagation();
+               console.log('🚪 Fechar Painel button clicked!');
+               handleCloseClick();
+             }}
+             className="text-gray-600 hover:text-white text-[10px] font-black uppercase tracking-[0.5em] transition-all cursor-pointer pointer-events-auto"
            >
              Fechar Painel
            </button>
