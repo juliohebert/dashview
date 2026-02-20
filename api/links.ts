@@ -1,20 +1,25 @@
 import { neon } from '@neondatabase/serverless';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { validateToken } from './auth/middleware';
 
 const sql = neon(process.env.DATABASE_URL!);
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS headers
   res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
 
   try {
+    // Validar autenticação
+    const session = validateToken(req);
+    const tenantId = session.tenantId;
+
     if (req.method === 'POST') {
       const { codigo, playlist } = req.body;
 
@@ -23,8 +28,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       await sql`
-        INSERT INTO links_compartilhamento (codigo_curto, dados_playlist)
-        VALUES (${codigo}, ${JSON.stringify(playlist)})
+        INSERT INTO links_compartilhamento (codigo_curto, dados_playlist, tenant_id)
+        VALUES (${codigo}, ${JSON.stringify(playlist)}, ${tenantId})
         ON CONFLICT (codigo_curto) DO UPDATE 
         SET dados_playlist = ${JSON.stringify(playlist)},
             criado_em = NOW()
@@ -39,9 +44,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Método não permitido' });
   } catch (error) {
     console.error('Erro na API /links:', error);
+    
+    // Erro de autenticação
+    if (error instanceof Error && (error.message.includes('Token') || error.message.includes('Sessão'))) {
+      return res.status(401).json({ error: error.message });
+    }
+    
     return res.status(500).json({ 
       error: 'Erro ao processar requisição',
       details: error instanceof Error ? error.message : 'Erro desconhecido'
     });
   }
 }
+

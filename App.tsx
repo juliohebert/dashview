@@ -4,9 +4,14 @@ import { PlaylistItem, ViewMode } from './types';
 import { INITIAL_PLAYLIST } from './constants';
 import DisplayView from './components/DisplayView';
 import DashboardView from './components/DashboardView';
+import LoginView from './components/LoginView';
+import RegisterView from './components/RegisterView';
 import { midiasService, linksService, localStorageService } from './lib/api';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 
-const App: React.FC = () => {
+const AppContent: React.FC = () => {
+  const { isAuthenticated, loading: authLoading, login, register, logout } = useAuth();
+  const [showRegister, setShowRegister] = useState(false);
   const getHashView = (): ViewMode => {
     const hash = window.location.hash.replace('#', '');
     return (hash === 'display' || hash === 'dashboard') ? (hash as ViewMode) : 'dashboard';
@@ -98,7 +103,7 @@ const App: React.FC = () => {
   };
 
   // Loading state
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className="w-full h-screen bg-[#010409] flex items-center justify-center">
         <div className="text-center space-y-4">
@@ -107,6 +112,28 @@ const App: React.FC = () => {
           <p className="text-gray-500 text-sm">Preparando playlist</p>
         </div>
       </div>
+    );
+  }
+
+  // Tela de autenticação
+  if (!isAuthenticated) {
+    if (showRegister) {
+      return (
+        <RegisterView
+          onRegister={async (nomeEmpresa, nomeUsuario, email, senha) => {
+            await register(nomeEmpresa, nomeUsuario, email, senha);
+            setShowRegister(false);
+          }}
+          onVoltar={() => setShowRegister(false)}
+        />
+      );
+    }
+
+    return (
+      <LoginView
+        onLogin={login}
+        onCadastro={() => setShowRegister(true)}
+      />
     );
   }
 
@@ -138,6 +165,14 @@ const App: React.FC = () => {
         </button>
       </div>
     </div>
+  );
+};
+
+const App: React.FC = () => {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 };
 

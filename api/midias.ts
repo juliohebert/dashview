@@ -1,22 +1,27 @@
 import { neon } from '@neondatabase/serverless';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { validateToken } from './auth/middleware';
 
 const sql = neon(process.env.DATABASE_URL!);
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS headers
   res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
 
   try {
+    // Validar autenticação
+    const session = validateToken(req);
+    const tenantId = session.tenantId;
+
     if (req.method === 'GET') {
-      // Buscar todas as mídias
+      // Buscar todas as mídias do tenant
       const result = await sql`
         SELECT 
           id::text,
@@ -29,6 +34,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           thumbnail,
           agendamento as schedule
         FROM midias
+        WHERE tenant_id = ${tenantId}
         ORDER BY data_criacao DESC
       `;
 
@@ -48,13 +54,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (req.method === 'POST') {
-      // Criar nova mídia
+      // Criar nova mídia associada ao tenant
       const { title, advertiser, type, duration, mediaUrl, thumbnail, schedule } = req.body;
 
       const result = await sql`
         INSERT INTO midias (
-          titulo, anunciante, tipo, duracao, url_midia, thumbnail, agendamento
+          tenant_id, titulo, anunciante, tipo, duracao, url_midia, thumbnail, agendamento
         ) VALUES (
+          ${tenantId},
           ${title},
           ${advertiser},
           ${type},
@@ -93,9 +100,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Método não permitido' });
   } catch (error) {
     console.error('Erro na API /midias:', error);
+    
+    // Erro de autenticação
+    if (error instanceof Error && (error.message.includes('Token') || error.message.includes('Sessão'))) {
+      return res.status(401).json({ error: error.message });
+    }
+    
     return res.status(500).json({ 
       error: 'Erro ao processar requisição',
       details: error instanceof Error ? error.message : 'Erro desconhecido'
     });
   }
 }
+

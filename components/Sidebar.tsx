@@ -1,5 +1,7 @@
 
 import React from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { LogOut, User as UserIcon } from 'lucide-react';
 
 interface SidebarProps {
   activeSection: 'playlist' | 'analytics';
@@ -7,6 +9,7 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => {
+  const { usuario, logout } = useAuth();
   const menuItems = [
     { 
       id: 'playlist' as const,
@@ -68,18 +71,35 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
         </div>
       </nav>
 
-      <div className="p-4 mt-auto">
-        <div className="bg-[#161b22] p-4 rounded-3xl border border-white/5 relative overflow-hidden group">
-          <div className="relative z-10">
-            <div className="flex items-center gap-2 mb-3">
-               <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-               <span className="text-[9px] font-black tracking-widest text-gray-400 uppercase">Plano Enterprise</span>
+      <div className="p-4 mt-auto space-y-3">
+        {/* Informações do Usuário */}
+        <div className="bg-[#161b22] p-4 rounded-2xl border border-white/5">
+          <div className="flex items-start gap-3 mb-3">
+            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0">
+              <UserIcon className="w-5 h-5 text-white" />
             </div>
-            <p className="text-xs text-gray-500 font-bold mb-4 leading-relaxed">Seu painel está sincronizado com 12 telas em tempo real.</p>
-            <button className="w-full bg-white/5 hover:bg-white/10 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white transition-all border border-white/5">
-              Falar com Suporte
-            </button>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-white truncate">{usuario?.nome}</p>
+              <p className="text-xs text-gray-500 truncate">{usuario?.email}</p>
+              <p className="text-[9px] text-gray-600 uppercase tracking-wider mt-1">{usuario?.tenantNome}</p>
+            </div>
           </div>
+          <button 
+            onClick={logout}
+            className="w-full bg-red-600/10 hover:bg-red-600/20 border border-red-600/20 py-2.5 rounded-xl text-xs font-bold text-red-400 transition-all flex items-center justify-center gap-2"
+          >
+            <LogOut className="w-4 h-4" />
+            Sair do Sistema
+          </button>
+        </div>
+        
+        {/* Info Card */}
+        <div className="bg-[#161b22] p-4 rounded-2xl border border-white/5">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+            <span className="text-[9px] font-black tracking-widest text-gray-400 uppercase">Plano Enterprise</span>
+          </div>
+          <p className="text-xs text-gray-500 font-bold leading-relaxed">Seu painel está sincronizado em tempo real.</p>
         </div>
       </div>
     </aside>

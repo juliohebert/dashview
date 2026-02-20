@@ -2,6 +2,20 @@ import { PlaylistItem } from '../types';
 
 const API_BASE_URL = '/api';
 
+// Função auxiliar para obter headers com autenticação
+function getAuthHeaders(): HeadersInit {
+  const token = localStorage.getItem('dashview_token');
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json'
+  };
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  return headers;
+}
+
 // Serviços de Mídias - API com fallback localStorage
 export const midiasService = {
   // Buscar todas as mídias
@@ -24,7 +38,7 @@ export const midiasService = {
     try {
       const response = await fetch(`${API_BASE_URL}/midias`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(midia)
       });
       
@@ -52,7 +66,7 @@ export const midiasService = {
     try {
       const response = await fetch(`${API_BASE_URL}/midias/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(midia)
       });
       
@@ -99,7 +113,7 @@ export const linksService = {
     try {
       const response = await fetch(`${API_BASE_URL}/links`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ codigo, playlist })
       });
       
