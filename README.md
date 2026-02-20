@@ -8,6 +8,8 @@ This contains everything you need to run your app locally.
 
 View your app in AI Studio: https://ai.studio/apps/f563652d-6f0d-4d61-8887-59b1bf4ac944
 
+<!-- Deploy timestamp: 2026-02-20 - Forced deployment with ShareModal fixes and video duration detection -->
+
 ## Run Locally
 
 **Prerequisites:**  Node.js

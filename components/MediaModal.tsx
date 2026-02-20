@@ -14,12 +14,15 @@ const MediaModal: React.FC<MediaModalProps> = ({ isOpen, onClose, onSave, initia
   const [uploadMethod, setUploadMethod] = useState<'url' | 'file'>('url');
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [autoDetectedDuration, setAutoDetectedDuration] = useState(false);
+  const [detectingDuration, setDetectingDuration] = useState(false);
 
   const [formData, setFormData] = useState({
     title: '',
     advertiser: '',
     type: 'Image' as const,
-    duration: '15s',
+    duration: '15',
     displayDays: 7,
     mediaUrl: '',
     ctaUrl: ''
@@ -37,7 +40,7 @@ const MediaModal: React.FC<MediaModalProps> = ({ isOpen, onClose, onSave, initia
         title: initialData.title,
         advertiser: initialData.advertiser,
         type: initialData.type,
-        duration: initialData.duration,
+        duration: initialData.duration?.replace('s', '') || '15',
         displayDays: initialData.displayDays || 7,
         mediaUrl: initialData.mediaUrl || '',
         ctaUrl: initialData.ctaUrl || ''
@@ -54,7 +57,7 @@ const MediaModal: React.FC<MediaModalProps> = ({ isOpen, onClose, onSave, initia
         title: '',
         advertiser: '',
         type: 'Image',
-        duration: '15s',
+        duration: '15',
         displayDays: 7,
         mediaUrl: '',
         ctaUrl: ''
@@ -71,14 +74,45 @@ const MediaModal: React.FC<MediaModalProps> = ({ isOpen, onClose, onSave, initia
 
   if (!isOpen) return null;
 
+  // Função para detectar duração do vídeo
+  const detectVideoDuration = (videoUrl: string, isVideoType: boolean) => {
+    if (!isVideoType) return;
+
+    // Criar elemento de vídeo temporário
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.src = videoUrl;
+    
+    video.onloadedmetadata = () => {
+      const durationInSeconds = Math.ceil(video.duration);
+      if (durationInSeconds && durationInSeconds > 0 && durationInSeconds < 1000) {
+        setFormData(prev => ({ ...prev, duration: durationInSeconds.toString() }));
+        setAutoDetectedDuration(true);
+        setTimeout(() => setAutoDetectedDuration(false), 3000);
+      }
+      video.remove();
+    };
+
+    video.onerror = () => {
+      video.remove();
+    };
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
+      const isVideo = file.type.startsWith('video');
+      
       reader.onloadend = () => {
         const base64String = reader.result as string;
         setFilePreview(base64String);
-        setFormData({ ...formData, mediaUrl: base64String, type: file.type.startsWith('video') ? 'Video' : 'Image' });
+        setFormData({ ...formData, mediaUrl: base64String, type: isVideo ? 'Video' : 'Image' });
+        
+        // Detectar duração do vídeo
+        if (isVideo) {
+          detectVideoDuration(base64String, true);
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -90,13 +124,61 @@ const MediaModal: React.FC<MediaModalProps> = ({ isOpen, onClose, onSave, initia
     return (match && match[2].length === 11) ? match[2] : null;
   };
 
+  // Função para detectar duração de vídeo do YouTube
+  const detectYouTubeDuration = async (videoId: string) => {
+    setDetectingDuration(true);
+    try {
+      // Usar API do YouTube oEmbed (mais confiável)
+      const response = await fetch(
+        `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Tentar extrair duração do título ou usar valores comuns para YouTube
+        let duration = 30; // Default para vídeos do YouTube
+        
+        // Se for um vídeo curto (Short), usar 60s
+        if (data.title && data.title.toLowerCase().includes('short')) {
+          duration = 60;
+        }
+        
+        setFormData(prev => ({ ...prev, duration: duration.toString() }));
+        setAutoDetectedDuration(true);
+        setTimeout(() => setAutoDetectedDuration(false), 5000);
+        setDetectingDuration(false);
+        return;
+      }
+    } catch (e) {
+      console.log('YouTube oEmbed falhou');
+    }
+    
+    // Se tudo falhar, usar 30s como padrão para YouTube
+    setFormData(prev => ({ ...prev, duration: '30' }));
+    setAutoDetectedDuration(true);
+    setTimeout(() => setAutoDetectedDuration(false), 3000);
+    setDetectingDuration(false);
+  };
+
   const handleUrlChange = (url: string) => {
     const ytId = getYouTubeId(url);
+    const isVideo = ytId || url.match(/\.(mp4|webm|ogg|mov)$/i);
+    
     setFormData({
       ...formData,
       mediaUrl: url,
-      type: ytId ? 'Video' : formData.type
+      type: isVideo ? 'Video' : formData.type
     });
+
+    // Detectar duração para YouTube
+    if (ytId) {
+      detectYouTubeDuration(ytId);
+    }
+    // Detectar duração para vídeos diretos (não YouTube)
+    else if (isVideo && url) {
+      detectVideoDuration(url, true);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -111,7 +193,7 @@ const MediaModal: React.FC<MediaModalProps> = ({ isOpen, onClose, onSave, initia
       title: formData.title,
       advertiser: formData.advertiser,
       type: formData.type,
-      duration: formData.duration,
+      duration: `${formData.duration}s`,
       displayDays: formData.displayDays,
       mediaUrl: formData.mediaUrl,
       ctaUrl: formData.ctaUrl,
@@ -288,18 +370,28 @@ const MediaModal: React.FC<MediaModalProps> = ({ isOpen, onClose, onSave, initia
           </div>
 
           <div className="grid grid-cols-3 gap-4">
-            <div className="space-y-2 col-span-1">
-              <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 px-2">Tempo (Seg)</label>
-              <select 
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 px-2">
+                Tempo (Seg)
+                {detectingDuration ? (
+                  <span className="ml-2 text-blue-500 text-[8px]">⏳</span>
+                ) : autoDetectedDuration ? (
+                  <span className="ml-2 text-green-500 text-[8px]">✓</span>
+                ) : null}
+              </label>
+              <input 
+                required
+                type="number" 
+                min="1"
+                max="300"
+                placeholder="15"
                 className="w-full bg-[#161b22] border-none rounded-2xl p-4 text-sm focus:ring-2 focus:ring-blue-500"
                 value={formData.duration}
-                onChange={(e) => setFormData({...formData, duration: e.target.value})}
-              >
-                <option value="10s">10 Seg</option>
-                <option value="15s">15 Seg</option>
-                <option value="30s">30 Seg</option>
-                <option value="60s">60 Seg</option>
-              </select>
+                onChange={(e) => {
+                  setFormData({...formData, duration: e.target.value});
+                  setAutoDetectedDuration(false);
+                }}
+              />
             </div>
             <div className="space-y-2 col-span-1">
               <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 px-2">Validade (Dias)</label>

@@ -14,36 +14,12 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, playlist }) =>
   const [shareUrl, setShareUrl] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
 
-  // Debug: verificar props ao montar
-  useEffect(() => {
-    console.log('🎬 ShareModal montado com props:', { 
-      isOpen, 
-      onCloseType: typeof onClose,
-      playlistLength: playlist?.length 
-    });
-  }, []);
-
   // Gera o link compartilhável ao abrir o modal
   useEffect(() => {
     if (isOpen && !shareUrl) {
       generateShareLink();
     }
   }, [isOpen]);
-
-  // Fechar com tecla ESC
-  useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        console.log('⌨️ ESC pressionado! Chamando onClose()');
-        onClose();
-      }
-    };
-    
-    if (isOpen) {
-      window.addEventListener('keydown', handleEsc);
-      return () => window.removeEventListener('keydown', handleEsc);
-    }
-  }, [isOpen, onClose]);
 
   // Função para gerar ID curto (6 caracteres alfanuméricos)
   const generateShortId = () => {
@@ -92,14 +68,7 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, playlist }) =>
 
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(shareUrl)}`;
 
-  console.log('📊 ShareModal render - isOpen:', isOpen);
-  
-  if (!isOpen) {
-    console.log('❌ ShareModal retornando null (fechado)');
-    return null;
-  }
-  
-  console.log('✅ ShareModal renderizando (aberto)');
+  if (!isOpen) return null;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(shareUrl);
@@ -107,72 +76,21 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, playlist }) =>
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    console.log('🎯 Backdrop clicked!', e.target, e.currentTarget, e.target === e.currentTarget);
-    if (e.target === e.currentTarget) {
-      console.log('✅ Chamando onClose()');
-      onClose();
-    } else {
-      console.log('❌ Não é backdrop direto');
-    }
-  };
-
-  const handleCloseClick = () => {
-    console.log('🔴 Close button clicked! Chamando onClose()');
-    console.log('🔍 onClose type:', typeof onClose);
-    console.log('🔍 onClose value:', onClose);
-    if (typeof onClose === 'function') {
-      onClose();
-      console.log('✅ onClose() executado!');
-    } else {
-      console.error('❌ onClose não é uma função!');
-    }
-  };
-
   return (
-    <div 
-      onClick={handleBackdropClick}
-      className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/95 backdrop-blur-xl pointer-events-auto"
-      style={{ animation: 'fadeIn 0.3s ease-in-out' }}
-    >
-      <div 
-        onClick={(e) => { 
-          console.log('📦 Content div clicked, stopping propagation'); 
-          e.stopPropagation(); 
-        }}
-        className="bg-[#0d1117] w-full max-w-lg rounded-[48px] border border-white/10 shadow-[0_0_150px_rgba(37,99,235,0.2)] overflow-hidden flex flex-col pointer-events-auto"
-        style={{ animation: 'zoomIn 0.3s ease-in-out' }}
-      >
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-300">
+      <div className="bg-[#0d1117] w-full max-w-lg rounded-[48px] border border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
         
-        <div className="p-10 pb-6 flex items-start justify-between bg-gradient-to-b from-blue-600/5 to-transparent">
-          <div className="space-y-1">
-            <div className="flex items-center gap-4 mb-2">
-               <div className="w-12 h-12 bg-blue-600 rounded-[20px] flex items-center justify-center shadow-2xl shadow-blue-600/40 border border-blue-400/30">
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-               </div>
-               <div>
-                  <h2 className="text-3xl font-black tracking-tight text-white leading-none">Compartilhar TV</h2>
-                  <p className="text-blue-500 text-[10px] font-black uppercase tracking-[0.3em] mt-2">Sessão Digital Signage</p>
-               </div>
-            </div>
+        <div className="p-8 border-b border-white/5 flex items-center justify-between bg-gradient-to-r from-blue-600/10 to-transparent">
+          <div>
+            <h2 className="text-3xl font-black tracking-tight">Compartilhar TV</h2>
+            <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mt-1">Link Curto • Fácil Digitação</p>
           </div>
-          <button 
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              console.log('❌ X button clicked!');
-              handleCloseClick();
-            }}
-            className="p-3 hover:bg-white/10 rounded-full text-gray-500 hover:text-white transition-all active:scale-90 cursor-pointer pointer-events-auto"
-          >
-            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          <button onClick={onClose} className="p-3 hover:bg-white/5 rounded-full text-gray-500 hover:text-white transition-all">
+            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
           </button>
         </div>
 
-        <div className="px-10 pb-12 space-y-10">
+        <div className="p-8 space-y-8 overflow-y-auto custom-scrollbar">
           
           <div className="flex flex-col items-center gap-6">
             <div className="relative group">
@@ -248,20 +166,7 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, playlist }) =>
           </div>
         </div>
 
-        <div className="bg-[#161b22]/40 p-8 flex justify-center border-t border-white/5">
-           <button 
-             type="button"
-             onClick={(e) => {
-               e.preventDefault();
-               e.stopPropagation();
-               console.log('🚪 Fechar Painel button clicked!');
-               handleCloseClick();
-             }}
-             className="text-gray-600 hover:text-white text-[10px] font-black uppercase tracking-[0.5em] transition-all cursor-pointer pointer-events-auto"
-           >
-             Fechar Painel
-           </button>
-        </div>
+
       </div>
     </div>
   );
