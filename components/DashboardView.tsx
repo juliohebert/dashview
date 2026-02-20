@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PlaylistItem, ViewMode } from '../types';
 import Sidebar from './Sidebar';
 import MediaCard from './MediaCard';
@@ -26,6 +26,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onViewChange, playlist, s
   const [viewType, setViewType] = useState<'grid' | 'table'>('grid');
   const [editingItem, setEditingItem] = useState<PlaylistItem | null>(null);
   const [activeSection, setActiveSection] = useState<'playlist' | 'analytics'>('playlist');
+
+  // Debug: monitora mudanças no estado da modal
+  useEffect(() => {
+    console.log('🔔 isShareModalOpen mudou para:', isShareModalOpen);
+  }, [isShareModalOpen]);
 
   const handleSaveMedia = async (data: Omit<PlaylistItem, 'id' | 'status'> & { id?: string }) => {
     setIsUploading(true);
@@ -300,7 +305,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onViewChange, playlist, s
 
         <ShareModal 
           isOpen={isShareModalOpen}
-          onClose={() => setIsShareModalOpen(false)}
+          onClose={() => {
+            console.log('onClose chamado, isShareModalOpen atual:', isShareModalOpen);
+            setIsShareModalOpen(false);
+            console.log('setIsShareModalOpen(false) executado');
+          }}
           playlist={playlist}
         />
 

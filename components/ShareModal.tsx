@@ -68,7 +68,14 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, playlist }) =>
 
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(shareUrl)}`;
 
-  if (!isOpen) return null;
+  console.log('📊 ShareModal render - isOpen:', isOpen);
+  
+  if (!isOpen) {
+    console.log('❌ ShareModal retornando null (fechado)');
+    return null;
+  }
+  
+  console.log('✅ ShareModal renderizando (aberto)');
 
   const handleCopy = () => {
     navigator.clipboard.writeText(shareUrl);
