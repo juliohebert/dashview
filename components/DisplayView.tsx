@@ -25,6 +25,7 @@ const DisplayView: React.FC<DisplayViewProps> = ({ playlist = [] }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [weather, setWeather] = useState<WeatherData>({ temp: 22, condition: 'Parcial', city: 'Carregando...' });
   const [progress, setProgress] = useState(0);
+  const [videoDuration, setVideoDuration] = useState<number | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // Função para verificar se uma mídia deve ser exibida baseado no agendamento
@@ -116,11 +117,35 @@ const DisplayView: React.FC<DisplayViewProps> = ({ playlist = [] }) => {
     }
   }, []);
 
+  // Captura duração real do vídeo
+  useEffect(() => {
+    if (videoRef.current) {
+      const handleLoadedMetadata = () => {
+        if (videoRef.current && videoRef.current.duration && isFinite(videoRef.current.duration)) {
+          setVideoDuration(videoRef.current.duration);
+        }
+      };
+      
+      videoRef.current.addEventListener('loadedmetadata', handleLoadedMetadata);
+      return () => {
+        videoRef.current?.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      };
+    }
+  }, [currentItem]);
+
   // 2. Progress Bar & Switch Logic
   useEffect(() => {
     if (activeItems.length === 0) return;
     
-    const durationSec = parseInt(currentItem?.duration) || 10;
+    // Prioridade: 1. Duração real do vídeo, 2. Duração configurada, 3. Padrão 10s
+    const isVideoItem = currentItem?.type === 'Video' || currentItem?.mediaUrl?.toLowerCase().endsWith('.mp4');
+    let durationSec = parseInt(currentItem?.duration) || 10;
+    
+    // Se for vídeo e temos duração real, usar ela (a menos que usuário tenha configurado manualmente)
+    if (isVideoItem && videoDuration && (!currentItem?.duration || currentItem.duration === '10')) {
+      durationSec = Math.ceil(videoDuration);
+    }
+    
     const durationMs = durationSec * 1000;
     const intervalMs = 50; // Update every 50ms for smoothness
     
@@ -135,13 +160,14 @@ const DisplayView: React.FC<DisplayViewProps> = ({ playlist = [] }) => {
 
     const switchTimer = setTimeout(() => {
       setCurrentIndex((prev) => (prev + 1) % activeItems.length);
+      setVideoDuration(null); // Resetar para próximo item
     }, durationMs);
 
     return () => {
       clearInterval(progressInterval);
       clearTimeout(switchTimer);
     };
-  }, [currentIndex, activeItems, currentItem]);
+  }, [currentIndex, activeItems, currentItem, videoDuration]);
 
   // 3. Preloading next media
   useEffect(() => {
@@ -247,17 +273,17 @@ const DisplayView: React.FC<DisplayViewProps> = ({ playlist = [] }) => {
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/30" />
 
-            <div className="absolute bottom-[12vh] lg:bottom-[15vh] left-[5vw] right-[5vw] max-w-[90%] lg:max-w-[70%] space-y-[1.5vh]">
+            <div className="absolute bottom-[12vh] lg:bottom-[15vh] left-[5vw] right-[5vw] max-w-[90%] lg:max-w-[70%] space-y-[1vh]">
               <motion.div 
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.5 }}
                 className="flex items-center gap-3"
               >
-                <span className="bg-blue-600 px-4 py-1.5 lg:px-[1.5vw] lg:py-[0.5vw] rounded-lg lg:rounded-[0.8vw] text-sm lg:text-[1.2vw] font-black uppercase tracking-widest text-white shadow-xl border border-blue-400/30">
+                <span className="bg-blue-600 px-3 py-1 lg:px-4 lg:py-1.5 rounded-lg text-xs lg:text-sm font-bold tracking-wide text-white shadow-lg border border-blue-400/30">
                   {currentItem?.advertiser}
                 </span>
-                <span className="bg-white/10 backdrop-blur-xl px-3 py-1 rounded-lg text-[10px] lg:text-[0.8vw] font-bold text-white/70 border border-white/10 uppercase">
+                <span className="bg-white/10 backdrop-blur-xl px-2 py-0.5 lg:px-3 lg:py-1 rounded text-[9px] lg:text-[10px] font-bold text-white/70 border border-white/10 uppercase">
                   Em Exibição
                 </span>
               </motion.div>
@@ -265,7 +291,7 @@ const DisplayView: React.FC<DisplayViewProps> = ({ playlist = [] }) => {
                 initial={{ y: 30, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.7 }}
-                className="text-[clamp(2rem,6vh,8vh)] lg:text-[clamp(3.5rem,8vw,14rem)] font-black text-white tracking-tighter leading-[0.85] uppercase drop-shadow-2xl"
+                className="text-[clamp(1.5rem,4vh,5vh)] lg:text-[clamp(2.5rem,4.5vw,6rem)] font-black text-white tracking-tight leading-[0.9] drop-shadow-2xl"
               >
                 {currentItem?.title}
               </motion.h2>
