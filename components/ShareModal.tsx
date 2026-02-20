@@ -1,6 +1,7 @@
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { PlaylistItem } from '../types';
+import { linksService } from '../lib/api';
 
 interface ShareModalProps {
   isOpen: boolean;
@@ -10,24 +11,15 @@ interface ShareModalProps {
 
 const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, playlist }) => {
   const [copied, setCopied] = useState(false);
+  const [shareUrl, setShareUrl] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
 
-  // Limpar playlists antigas (mais de 30 dias) do localStorage
-  const cleanOldPlaylists = () => {
-    const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
-    const keys = Object.keys(localStorage);
-    
-    keys.forEach(key => {
-      if (key.startsWith('playlist_') && key.endsWith('_created')) {
-        const timestamp = parseInt(localStorage.getItem(key) || '0');
-        if (timestamp < thirtyDaysAgo) {
-          const playlistId = key.replace('_created', '');
-          localStorage.removeItem(playlistId);
-          localStorage.removeItem(key);
-          console.log(`Playlist antiga removida: ${playlistId}`);
-        }
-      }
-    });
-  };
+  // Gera o link compartilhável ao abrir o modal
+  useEffect(() => {
+    if (isOpen && !shareUrl) {
+      generateShareLink();
+    }
+  }, [isOpen]);
 
   // Função para gerar ID curto (6 caracteres alfanuméricos)
   const generateShortId = () => {
@@ -39,19 +31,10 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, playlist }) =>
     return id;
   };
 
-  const shareUrl = useMemo(() => {
-    // Limpa playlists antigas antes de criar uma nova
-    cleanOldPlaylists();
+  const generateShareLink = async () => {
+    setIsGenerating(true);
     try {
-      // Gera um ID curto único
-      let shortId = generateShortId();
-      
-      // Verifica se já existe, se sim, gera outro
-      while (localStorage.getItem(`playlist_${shortId}`)) {
-        shortId = generateShortId();
-      }
-
-      // Filtra apenas itens ativos ou essenciais
+      // Filtra apenas dados essenciais
       const compactPlaylist = playlist.map(item => ({
         id: item.id,
         title: item.title,
@@ -64,21 +47,24 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, playlist }) =>
         schedule: item.schedule
       }));
 
-      // Armazena a playlist no localStorage com o ID
-      localStorage.setItem(`playlist_${shortId}`, JSON.stringify(compactPlaylist));
+      // Gera ID curto único
+      let shortId = generateShortId();
+      while (localStorage.getItem(`playlist_${shortId}`)) {
+        shortId = generateShortId();
+      }
       
-      // Timestamp para expiração (opcional - 30 dias)
-      localStorage.setItem(`playlist_${shortId}_created`, Date.now().toString());
+      // Salva link
+      const result = await linksService.create(shortId, compactPlaylist);
+      setShareUrl(result.url);
       
-      const baseUrl = window.location.origin + window.location.pathname;
-      const url = `${baseUrl}?id=${shortId}#display`;
-      
-      return url;
-    } catch (e) {
-      console.error("Erro na geração do link:", e);
-      return `${window.location.origin}${window.location.pathname}#display`;
+    } catch (error) {
+      console.error("Erro ao gerar link:", error);
+      const fallbackUrl = `${window.location.origin}${window.location.pathname}#display`;
+      setShareUrl(fallbackUrl);
+    } finally {
+      setIsGenerating(false);
     }
-  }, [playlist]);
+  };
 
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(shareUrl)}`;
 

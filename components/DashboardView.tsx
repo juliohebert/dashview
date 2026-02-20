@@ -9,6 +9,7 @@ import MediaModal from './MediaModal';
 import ShareModal from './ShareModal';
 import PlaylistTable from './PlaylistTable';
 import AnalyticsView from './AnalyticsView';
+import { midiasService } from '../lib/api';
 
 interface DashboardViewProps {
   onViewChange: (v: ViewMode) => void;
@@ -26,23 +27,27 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onViewChange, playlist, s
   const [editingItem, setEditingItem] = useState<PlaylistItem | null>(null);
   const [activeSection, setActiveSection] = useState<'playlist' | 'analytics'>('playlist');
 
-  const handleSaveMedia = (data: Omit<PlaylistItem, 'id' | 'status'> & { id?: string }) => {
-    if (data.id) {
-      setPlaylist(prev => prev.map(item => 
-        item.id === data.id ? { ...item, ...data } as PlaylistItem : item
-      ));
-    } else {
-      const newItem: PlaylistItem = {
-        ...data,
-        id: Date.now().toString(),
-        status: 'Ativo'
-      };
-      setPlaylist([newItem, ...playlist]);
-    }
-    
+  const handleSaveMedia = async (data: Omit<PlaylistItem, 'id' | 'status'> & { id?: string }) => {
     setIsUploading(true);
-    setTimeout(() => setIsUploading(false), 3000);
-    setEditingItem(null);
+    try {
+      if (data.id) {
+        // Edição: atualiza no banco
+        await midiasService.update(data.id, data);
+        setPlaylist(prev => prev.map(item => 
+          item.id === data.id ? { ...item, ...data } as PlaylistItem : item
+        ));
+      } else {
+        // Criação: salva no banco
+        const newItem = await midiasService.create(data);
+        setPlaylist(prev => [newItem, ...prev]);
+      }
+      setEditingItem(null);
+    } catch (error) {
+      console.error('Erro ao salvar mídia:', error);
+      alert('Erro ao salvar mídia. Tente novamente.');
+    } finally {
+      setTimeout(() => setIsUploading(false), 2000);
+    }
   };
 
   const handleEditClick = (item: PlaylistItem) => {
@@ -50,21 +55,34 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onViewChange, playlist, s
     setIsModalOpen(true);
   };
 
-  const handleDeleteClick = (id: string) => {
-    setPlaylist(prev => prev.filter(item => item.id !== id));
-    
-    // Feedback visual opcional
+  const handleDeleteClick = async (id: string) => {
     setIsUploading(true);
-    setTimeout(() => setIsUploading(false), 2000);
+    try {
+      await midiasService.delete(id);
+      setPlaylist(prev => prev.filter(item => item.id !== id));
+    } catch (error) {
+      console.error('Erro ao deletar mídia:', error);
+      alert('Erro ao deletar mídia. Tente novamente.');
+    } finally {
+      setTimeout(() => setIsUploading(false), 2000);
+    }
   };
 
-  const toggleStatus = (id: string) => {
-    setPlaylist(prev => prev.map(item => {
-      if (item.id === id) {
-        return { ...item, status: item.status === 'Ativo' ? 'Inativo' : 'Ativo' };
-      }
-      return item;
-    }));
+  const toggleStatus = async (id: string) => {
+    const item = playlist.find(item => item.id === id);
+    if (!item) return;
+
+    const newStatus = item.status === 'Ativo' ? 'Inativo' : 'Ativo';
+    
+    try {
+      await midiasService.update(id, { ...item, status: newStatus });
+      setPlaylist(prev => prev.map(item => 
+        item.id === id ? { ...item, status: newStatus } : item
+      ));
+    } catch (error) {
+      console.error('Erro ao alterar status:', error);
+      alert('Erro ao alterar status. Tente novamente.');
+    }
   };
 
   const updateItemOrder = (id: string, newOrder: number) => {

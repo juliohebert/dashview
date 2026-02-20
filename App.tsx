@@ -4,6 +4,7 @@ import { PlaylistItem, ViewMode } from './types';
 import { INITIAL_PLAYLIST } from './constants';
 import DisplayView from './components/DisplayView';
 import DashboardView from './components/DashboardView';
+import { midiasService, linksService, localStorageService } from './lib/api';
 
 const App: React.FC = () => {
   const getHashView = (): ViewMode => {
@@ -12,57 +13,75 @@ const App: React.FC = () => {
   };
 
   const [view, setView] = useState<ViewMode>(getHashView());
-  
-  const getInitialPlaylist = useCallback((): PlaylistItem[] => {
-    const params = new URLSearchParams(window.location.search);
-    
-    // Método 1: Link curto com ID
-    const shortId = params.get('id');
-    if (shortId) {
-      try {
-        const storedPlaylist = localStorage.getItem(`playlist_${shortId}`);
-        if (storedPlaylist) {
-          console.log(`Carregando playlist do link curto: ${shortId}`);
-          return JSON.parse(storedPlaylist);
-        } else {
-          console.warn(`Playlist não encontrada para ID: ${shortId}`);
-        }
-      } catch (e) {
-        console.error("Erro ao carregar playlist do link curto:", e);
-      }
-    }
-    
-    // Método 2: Link longo com base64 (compatibilidade com links antigos)
-    const encodedData = params.get('p');
-    if (encodedData) {
-      try {
-        const normalizedBase64 = encodedData.replace(/-/g, '+').replace(/_/g, '/');
-        const binaryString = atob(normalizedBase64);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
-        }
-        const decodedString = new TextDecoder().decode(bytes);
-        const decoded = JSON.parse(decodedString);
-        return decoded;
-      } catch (e) {
-        console.error("Erro na decodificação:", e);
-      }
-    }
+  const [playlist, setPlaylist] = useState<PlaylistItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-    // Método 3: localStorage padrão
-    const saved = localStorage.getItem('dashview_playlist');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
-        return INITIAL_PLAYLIST;
-      }
-    }
-    return INITIAL_PLAYLIST;
+  // Carregar playlist ao iniciar
+  useEffect(() => {
+    loadPlaylist();
   }, []);
 
-  const [playlist, setPlaylist] = useState<PlaylistItem[]>(getInitialPlaylist);
+  const loadPlaylist = async () => {
+    setLoading(true);
+    const params = new URLSearchParams(window.location.search);
+    
+    try {
+      // Método 1: Link curto com ID - buscar da API
+      const shortId = params.get('id');
+      if (shortId) {
+        console.log(`Carregando playlist compartilhada: ${shortId}`);
+        try {
+          const response = await linksService.getByCode(shortId);
+          setPlaylist(response.playlist);
+          setLoading(false);
+          return;
+        } catch (error) {
+          console.warn('Erro ao buscar link da API, tentando localStorage:', error);
+          // Fallback para localStorage
+          const storedPlaylist = localStorage.getItem(`playlist_${shortId}`);
+          if (storedPlaylist) {
+            setPlaylist(JSON.parse(storedPlaylist));
+            setLoading(false);
+            return;
+          }
+        }
+      }
+      
+      // Método 2: Link longo com base64 (compatibilidade)
+      const encodedData = params.get('p');
+      if (encodedData) {
+        try {
+          const normalizedBase64 = encodedData.replace(/-/g, '+').replace(/_/g, '/');
+          const binaryString = atob(normalizedBase64);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          const decodedString = new TextDecoder().decode(bytes);
+          const decoded = JSON.parse(decodedString);
+          setPlaylist(decoded);
+          setLoading(false);
+          return;
+        } catch (e) {
+          console.error("Erro na decodificação:", e);
+        }
+      }
+
+      // Método 3: Carregar mídias salvas
+      console.log('Carregando mídias salvas...');
+      const apiPlaylist = await midiasService.getAll();
+      setPlaylist(apiPlaylist);
+      console.log(`✅ ${apiPlaylist.length} mídias carregadas`);
+      
+    } catch (error) {
+      console.warn('Erro ao carregar mídias, usando dados iniciais:', error);
+      // Fallback: localStorage ou dados iniciais
+      const fallbackPlaylist = localStorageService.get();
+      setPlaylist(fallbackPlaylist.length > 0 ? fallbackPlaylist : INITIAL_PLAYLIST);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Sincronização de visualização quando a Hash muda (botão voltar do navegador ou links)
   useEffect(() => {
@@ -73,18 +92,23 @@ const App: React.FC = () => {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
-  // Persistência
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (!params.get('p')) {
-      localStorage.setItem('dashview_playlist', JSON.stringify(playlist));
-    }
-  }, [playlist]);
-
   const navigateTo = (newView: ViewMode) => {
     window.location.hash = newView;
     setView(newView);
   };
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="w-full h-screen bg-[#010409] flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="text-white font-bold text-lg">Carregando DashView...</p>
+          <p className="text-gray-500 text-sm">Preparando playlist</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-screen bg-black text-white overflow-hidden selection:bg-blue-500/30">
