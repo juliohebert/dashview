@@ -148,6 +148,42 @@ const MediaModal: React.FC<MediaModalProps> = ({ isOpen, onClose, onSave, initia
                 value={formData.mediaUrl}
                 onChange={(e) => handleUrlChange(e.target.value)}
               />
+
+              {/* URL Preview Section */}
+              {formData.mediaUrl && (
+                <div className="mt-4 p-2 bg-black/20 rounded-2xl border border-white/5 overflow-hidden">
+                  <div className="aspect-video w-full max-w-[240px] mx-auto rounded-xl overflow-hidden bg-[#0d1117] relative group">
+                    {getYouTubeId(formData.mediaUrl) ? (
+                      <img 
+                        src={`https://img.youtube.com/vi/${getYouTubeId(formData.mediaUrl)}/mqdefault.jpg`}
+                        className="w-full h-full object-cover"
+                        alt="YouTube Preview"
+                      />
+                    ) : formData.type === 'Video' || formData.mediaUrl.toLowerCase().endsWith('.mp4') ? (
+                      <video 
+                        src={formData.mediaUrl} 
+                        className="w-full h-full object-cover"
+                        muted
+                        onMouseOver={(e) => e.currentTarget.play()}
+                        onMouseOut={(e) => e.currentTarget.pause()}
+                      />
+                    ) : (
+                      <img 
+                        src={formData.mediaUrl} 
+                        className="w-full h-full object-cover"
+                        alt="Preview"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/error/400/225?blur=10';
+                        }}
+                      />
+                    )}
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-white bg-blue-600 px-2 py-1 rounded">Pré-visualização</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <p className="text-[9px] text-gray-500 px-2 leading-relaxed">
                 <span className="text-blue-500 font-black">Dica:</span> Use links diretos para garantir que a TV exiba o conteúdo em 4K/HD sem perdas de compressão.
               </p>
