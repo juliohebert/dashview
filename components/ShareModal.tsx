@@ -101,7 +101,7 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, playlist }) =>
 
         <div className="px-10 pb-12 space-y-10">
           
-          <div className="flex flex-col items-center gap-8">
+          <div className="flex flex-col items-center gap-6">
             <div className="relative group">
               <div className="absolute -inset-6 bg-blue-600/10 blur-[50px] rounded-full animate-pulse" />
               <div className="relative p-7 bg-white rounded-[44px] shadow-2xl transition-transform hover:scale-[1.03] duration-500 cursor-none">
@@ -121,22 +121,36 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, playlist }) =>
             </div>
           </div>
 
+          {/* Código Curto para Digitação */}
+          <div className="bg-gradient-to-br from-blue-600/10 to-purple-600/10 border-2 border-blue-500/30 rounded-3xl p-6 text-center">
+            <p className="text-[10px] text-blue-400 font-black uppercase tracking-widest mb-4">🎯 Digite na TV</p>
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <span className="text-gray-400 text-sm font-medium">{window.location.origin}/?id=</span>
+              <div className="bg-blue-600 px-6 py-3 rounded-2xl shadow-2xl shadow-blue-600/50 border-2 border-blue-400">
+                <span className="text-white text-3xl font-black tracking-[0.3em] font-mono">
+                  {shareUrl.split('id=')[1]?.split('#')[0] || '------'}
+                </span>
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 mt-3">Digite apenas os <span className="text-white font-bold">6 caracteres</span> destacados</p>
+          </div>
+
           <div className="space-y-4">
              <div className="relative flex items-center group">
                 <div className="absolute left-5 text-blue-500 group-hover:scale-110 transition-transform">
-                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 </div>
                 <input 
                   readOnly
                   type="text" 
                   value={shareUrl}
-                  className="w-full bg-[#161b22] border border-white/5 rounded-2xl py-5 pl-14 pr-36 text-xs font-mono transition-all cursor-default text-blue-400 focus:ring-2 focus:ring-blue-500/50"
+                  className="w-full bg-[#161b22] border border-white/10 rounded-2xl py-6 pl-16 pr-36 text-sm font-mono transition-all cursor-text select-all text-white focus:ring-2 focus:ring-blue-500/50"
                 />
                 <button 
                   onClick={handleCopy}
                   className={`absolute right-2.5 px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 ${copied ? 'bg-green-600 text-white' : 'bg-blue-600 text-white hover:bg-blue-500 shadow-xl shadow-blue-600/30'}`}
                 >
-                  {copied ? 'Copiado' : 'Copiar Link'}
+                  {copied ? '✓ Copiado' : 'Copiar Link'}
                 </button>
              </div>
 
@@ -145,16 +159,10 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, playlist }) =>
                    <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 </div>
                 <div className="space-y-2.5">
-                   <p className="text-xs text-blue-400 font-black uppercase tracking-widest">✨ Link Curto Ativado</p>
+                   <p className="text-xs text-blue-400 font-black uppercase tracking-widest">✨ Link Compartilhável</p>
                    <p className="text-[10px] text-gray-500 font-medium leading-relaxed">
-                     O link foi otimizado com apenas <span className="text-white font-bold">6 caracteres</span> para facilitar a digitação na TV. A playlist fica armazenada localmente no navegador de onde foi compartilhada.
+                     O link foi otimizado com apenas <span className="text-white font-bold">6 caracteres</span> para facilitar a digitação na TV. Cole o link completo ou digite apenas o código destacado.
                    </p>
-                   <div className="bg-[#0d1117] rounded-xl p-3 border border-white/5 mt-2">
-                     <p className="text-[9px] text-gray-600 font-bold uppercase tracking-wider mb-1">Exemplo de Link Curto:</p>
-                     <p className="text-xs text-green-500 font-mono font-bold">
-                       {window.location.origin}/?id=<span className="text-white bg-green-600/20 px-1.5 py-0.5 rounded">ABC123</span>
-                     </p>
-                   </div>
                 </div>
              </div>
           </div>
