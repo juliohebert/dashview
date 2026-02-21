@@ -29,11 +29,12 @@ const AppContent: React.FC = () => {
   const loadPlaylist = async () => {
     setLoading(true);
     const params = new URLSearchParams(window.location.search);
+    const liveMode = params.get('mode') === 'live';
     
     try {
-      // Método 1: Link curto com ID - buscar da API
+      // Método 1: Link curto com ID - buscar da API (ignorado em modo live)
       const shortId = params.get('id');
-      if (shortId) {
+      if (shortId && !liveMode) {
         console.log(`Carregando playlist compartilhada: ${shortId}`);
         try {
           const response = await linksService.getByCode(shortId);
@@ -140,7 +141,10 @@ const AppContent: React.FC = () => {
   return (
     <div className="w-full h-screen bg-black text-white overflow-hidden selection:bg-blue-500/30">
       {view === 'display' ? (
-        <DisplayView playlist={playlist} />
+        <DisplayView 
+          playlist={playlist} 
+          onPlaylistUpdate={setPlaylist}
+        />
       ) : (
         <DashboardView 
           playlist={playlist}

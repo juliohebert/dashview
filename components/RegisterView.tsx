@@ -218,7 +218,7 @@ export default function RegisterView({ onRegister, onVoltar }: RegisterViewProps
 
         {/* Footer */}
         <p className="text-center text-gray-600 text-sm mt-6">
-          DashView © 2024 - Sistema de Gestão de Mídias
+          DashView © 2026 - Sistema de Gestão de Mídias
         </p>
       </div>
     </div>

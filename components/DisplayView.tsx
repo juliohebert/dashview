@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { PlaylistItem, WeatherData } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -15,18 +15,144 @@ import {
   ArrowRight,
   Tv
 } from 'lucide-react';
+import { midiasService, linksService } from '../lib/api';
 
 interface DisplayViewProps {
   playlist?: PlaylistItem[];
+  onPlaylistUpdate?: (newPlaylist: PlaylistItem[]) => void;
 }
 
-const DisplayView: React.FC<DisplayViewProps> = ({ playlist = [] }) => {
-  const [time, setTime] = useState(new Date());
+const DisplayView: React.FC<DisplayViewProps> = ({ playlist = [], onPlaylistUpdate }) => {
+  const [time, setTime] = useState(new Date()); // Para exibição (atualiza a cada segundo)
+  const [scheduleTime, setScheduleTime] = useState(new Date()); // Para agendamento (atualiza a cada minuto)
   const [currentIndex, setCurrentIndex] = useState(0);
   const [weather, setWeather] = useState<WeatherData>({ temp: 22, condition: 'Parcial', city: 'Carregando...' });
   const [progress, setProgress] = useState(0);
   const [videoDuration, setVideoDuration] = useState<number | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [localPlaylist, setLocalPlaylist] = useState<PlaylistItem[]>(playlist);
+  const lastRefreshTimestamp = useRef<number>(0);
+
+  // Atualizar playlist local quando prop mudar
+  useEffect(() => {
+    setLocalPlaylist(playlist);
+  }, [playlist]);
+
+  // Função para recarregar playlist do servidor (com useCallback para evitar closure)
+  const handleRefreshPlaylist = useCallback(async () => {
+    // Debounce: evitar múltiplas execuções em menos de 1 segundo
+    const now = Date.now();
+    if (now - lastRefreshTimestamp.current < 1000) {
+      console.log('⏭️ Sincronização ignorada (debounce)');
+      return;
+    }
+    lastRefreshTimestamp.current = now;
+    
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const shortId = params.get('id');
+      const liveMode = params.get('mode') === 'live';
+      
+      let newPlaylist: PlaylistItem[] = [];
+      
+      // Se tiver ID mas também mode=live, prioriza banco geral (sempre atualizado)
+      if (shortId && !liveMode) {
+        const response = await linksService.getByCode(shortId);
+        newPlaylist = response.playlist;
+        console.log('📌 Link compartilhado (playlist fixa)');
+      } else {
+        newPlaylist = await midiasService.getAll();
+        console.log('🔴 Modo live (banco sempre atualizado)');
+      }
+      
+      setLocalPlaylist(newPlaylist);
+      
+      if (onPlaylistUpdate) {
+        onPlaylistUpdate(newPlaylist);
+      }
+      
+      // Reset index se playlist mudou drasticamente
+      if (newPlaylist.length > 0 && currentIndex >= newPlaylist.length) {
+        setCurrentIndex(0);
+      }
+      
+      console.log('✅ TV atualizada -', newPlaylist.length, 'mídias carregadas');
+    } catch (error) {
+      console.error('❌ Erro ao atualizar playlist:', error);
+    }
+  }, [currentIndex, onPlaylistUpdate]);
+
+  // Auto-refresh a cada 5 minutos
+  useEffect(() => {
+    const autoRefreshInterval = setInterval(() => {
+      handleRefreshPlaylist();
+    }, 5 * 60 * 1000); // 5 minutos
+
+    return () => clearInterval(autoRefreshInterval);
+  }, [handleRefreshPlaylist]);
+
+  // Escutar comandos de atualização do painel admin
+  useEffect(() => {
+    console.log('🔌 Listeners de sincronização iniciados');
+    
+    let lastSyncCheck = 0;
+    
+    // Método 1: BroadcastChannel
+    let channel: BroadcastChannel | null = null;
+    try {
+      channel = new BroadcastChannel('dashview_sync');
+      channel.onmessage = (event) => {
+        if (event.data.type === 'REFRESH_PLAYLIST') {
+          console.log('📡 Sincronização via BroadcastChannel');
+          handleRefreshPlaylist();
+        }
+      };
+    } catch (error) {
+      // Silencioso
+    }
+    
+    // Método 2: Storage event (funciona entre todas as abas/janelas)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'dashview_sync' && e.newValue) {
+        try {
+          const data = JSON.parse(e.newValue);
+          if (data.type === 'REFRESH_PLAYLIST') {
+            console.log('📡 Sincronização via Storage Event');
+            handleRefreshPlaylist();
+          }
+        } catch (error) {
+          // Silencioso
+        }
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Método 3: Polling (fallback final - verifica a cada 2 segundos)
+    const pollingInterval = setInterval(() => {
+      try {
+        const syncData = localStorage.getItem('dashview_sync');
+        if (syncData) {
+          const data = JSON.parse(syncData);
+          if (data.timestamp && data.timestamp > lastSyncCheck) {
+            lastSyncCheck = data.timestamp;
+            if (data.type === 'REFRESH_PLAYLIST') {
+              console.log('📡 Sincronização via Polling');
+              handleRefreshPlaylist();
+            }
+          }
+        }
+      } catch (error) {
+        // Silencioso
+      }
+    }, 2000);
+
+    return () => {
+      if (channel) channel.close();
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(pollingInterval);
+    };
+  }, [handleRefreshPlaylist]);
 
   // Função para verificar se uma mídia deve ser exibida baseado no agendamento
   const isMediaScheduledNow = (item: PlaylistItem): boolean => {
@@ -64,10 +190,10 @@ const DisplayView: React.FC<DisplayViewProps> = ({ playlist = [] }) => {
   };
 
   const activeItems = useMemo(() => 
-    playlist
+    localPlaylist
       .filter(item => item.status === 'Ativo')
       .filter(item => isMediaScheduledNow(item)),
-  [playlist, time]); // Incluir 'time' para reavaliar a cada minuto
+  [localPlaylist, scheduleTime]); // Usar scheduleTime que atualiza apenas a cada minuto
 
   const currentItem = activeItems[currentIndex];
   const nextItem = activeItems[(currentIndex + 1) % activeItems.length];
@@ -81,9 +207,16 @@ const DisplayView: React.FC<DisplayViewProps> = ({ playlist = [] }) => {
     "Siga-nos nas redes sociais para mais novidades @dashview_signage"
   ], []);
 
+  // Atualizar time para exibição a cada segundo
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(timer);
+  }, []);
+
+  // Atualizar scheduleTime para agendamento a cada minuto
+  useEffect(() => {
+    const scheduleTimer = setInterval(() => setScheduleTime(new Date()), 60000);
+    return () => clearInterval(scheduleTimer);
   }, []);
 
   // Weather Fetching
@@ -137,14 +270,20 @@ const DisplayView: React.FC<DisplayViewProps> = ({ playlist = [] }) => {
   useEffect(() => {
     if (activeItems.length === 0) return;
     
-    // Prioridade: 1. Duração real do vídeo, 2. Duração configurada, 3. Padrão 10s
-    const isVideoItem = currentItem?.type === 'Video' || currentItem?.mediaUrl?.toLowerCase().endsWith('.mp4');
-    let durationSec = parseInt(currentItem?.duration) || 10;
+    // Obter item atual dentro do effect para garantir valor atualizado
+    const item = activeItems[currentIndex];
+    if (!item) return;
     
-    // Se for vídeo e temos duração real, usar ela (a menos que usuário tenha configurado manualmente)
-    if (isVideoItem && videoDuration && (!currentItem?.duration || currentItem.duration === '10')) {
-      durationSec = Math.ceil(videoDuration);
-    }
+    // Prioridade: 1. Duração configurada, 2. Duração real do vídeo, 3. Padrão 10s
+    const isVideoItem = item?.type === 'Video' || item?.mediaUrl?.toLowerCase().endsWith('.mp4');
+    
+    // Tentar pegar duração configurada (removendo 's' se presente)
+    const configuredDuration = item?.duration 
+      ? parseInt(item.duration.toString().replace('s', '')) 
+      : null;
+    
+    // Usar: 1) duração configurada, 2) duração detectada do vídeo, 3) padrão 10s
+    let durationSec = configuredDuration || (isVideoItem && videoDuration ? Math.ceil(videoDuration) : 10);
     
     const durationMs = durationSec * 1000;
     const intervalMs = 50; // Update every 50ms for smoothness
@@ -167,7 +306,7 @@ const DisplayView: React.FC<DisplayViewProps> = ({ playlist = [] }) => {
       clearInterval(progressInterval);
       clearTimeout(switchTimer);
     };
-  }, [currentIndex, activeItems, currentItem, videoDuration]);
+  }, [currentIndex, activeItems, videoDuration]); // activeItems agora só muda quando necessário (não mais a cada segundo)
 
   // 3. Preloading next media
   useEffect(() => {
@@ -186,8 +325,13 @@ const DisplayView: React.FC<DisplayViewProps> = ({ playlist = [] }) => {
   };
 
   const handleExit = () => {
-    window.location.hash = 'dashboard';
+    window.location.href = window.location.pathname + '#dashboard';
   };
+
+  // Detectar modo de exibição
+  const params = new URLSearchParams(window.location.search);
+  const isLiveMode = params.get('mode') === 'live' || !params.get('id');
+  const sharedLinkId = params.get('id');
 
   const getYouTubeId = (url: string) => {
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
@@ -224,7 +368,7 @@ const DisplayView: React.FC<DisplayViewProps> = ({ playlist = [] }) => {
   return (
     <div className="flex flex-col lg:flex-row h-screen w-screen bg-black overflow-hidden cursor-none select-none font-inter">
       
-      {/* 2. Progress Bar (Top) */}
+      {/* Progress Bar (Top) */}
       <div className="fixed top-0 left-0 right-0 h-1.5 bg-white/5 z-[100]">
         <motion.div 
           className="h-full bg-blue-600 shadow-[0_0_15px_rgba(37,99,235,0.8)]"

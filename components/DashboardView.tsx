@@ -26,6 +26,43 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onViewChange, playlist, s
   const [viewType, setViewType] = useState<'grid' | 'table'>('grid');
   const [editingItem, setEditingItem] = useState<PlaylistItem | null>(null);
   const [activeSection, setActiveSection] = useState<'playlist' | 'analytics'>('playlist');
+  const [isSyncingTV, setIsSyncingTV] = useState(false);
+
+  // Função para notificar TV sobre atualização
+  const handleSyncTV = () => {
+    setIsSyncingTV(true);
+    try {
+      const timestamp = Date.now();
+      
+      // Método 1: BroadcastChannel (navegadores modernos)
+      try {
+        const channel = new BroadcastChannel('dashview_sync');
+        channel.postMessage({ type: 'REFRESH_PLAYLIST', timestamp });
+        channel.close();
+      } catch (bcError) {
+        // Silencioso
+      }
+      
+      // Método 2: localStorage + storage event (fallback universal)
+      localStorage.setItem('dashview_sync', JSON.stringify({
+        type: 'REFRESH_PLAYLIST',
+        timestamp
+      }));
+      
+      console.log('✅ Comando de atualização enviado para TV');
+      
+      // Limpar após um tempo (5s para dar tempo do polling detectar)
+      setTimeout(() => {
+        localStorage.removeItem('dashview_sync');
+      }, 5000);
+      
+      // Feedback visual
+      setTimeout(() => setIsSyncingTV(false), 1500);
+    } catch (error) {
+      console.error('❌ Erro ao sincronizar TV:', error);
+      setIsSyncingTV(false);
+    }
+  };
 
   const handleSaveMedia = async (data: Omit<PlaylistItem, 'id' | 'status'> & { id?: string }) => {
     setIsUploading(true);
@@ -193,8 +230,25 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onViewChange, playlist, s
                   <h2 className="text-2xl lg:text-4xl font-black mb-1 tracking-tight">Lobby Central</h2>
                   <p className="text-gray-500 text-sm font-medium">Smart TV 50" • Sincronizado</p>
                   <div className="hidden lg:flex gap-4 mt-6">
-                    <button onClick={() => onViewChange('display')} className="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-bold text-xs hover:bg-blue-500 transition-all shadow-lg shadow-blue-500/20">
+                    <button 
+                      onClick={() => {
+                        // Abre Player TV em modo live (sempre busca do banco)
+                        const url = `${window.location.pathname}?mode=live#display`;
+                        window.location.href = url;
+                      }} 
+                      className="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-bold text-xs hover:bg-blue-500 transition-all shadow-lg shadow-blue-500/20"
+                    >
                       Abrir Player TV
+                    </button>
+                    <button 
+                      onClick={handleSyncTV}
+                      disabled={isSyncingTV}
+                      className={`px-5 py-2.5 rounded-xl font-bold text-xs border transition-all flex items-center gap-2 ${isSyncingTV ? 'bg-green-600 text-white border-green-500' : 'bg-white/5 text-white border-white/10 hover:bg-white/10'}`}
+                    >
+                      <svg className={`w-4 h-4 ${isSyncingTV ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                      {isSyncingTV ? 'Atualizado!' : 'Atualizar TV'}
                     </button>
                     <button 
                       onClick={() => setIsShareModalOpen(true)}

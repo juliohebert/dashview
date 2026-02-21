@@ -12,6 +12,7 @@ interface ShareModalProps {
 const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, playlist }) => {
   const [copied, setCopied] = useState(false);
   const [shareUrl, setShareUrl] = useState('');
+  const [editedUrl, setEditedUrl] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
 
   // Gera o link compartilhável ao abrir o modal
@@ -20,6 +21,11 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, playlist }) =>
       generateShareLink();
     }
   }, [isOpen]);
+
+  // Atualizar URL editada quando shareUrl mudar
+  useEffect(() => {
+    setEditedUrl(shareUrl);
+  }, [shareUrl]);
 
   // Função para gerar ID curto (6 caracteres alfanuméricos)
   const generateShortId = () => {
@@ -66,12 +72,13 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, playlist }) =>
     }
   };
 
-  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(shareUrl)}`;
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(editedUrl || shareUrl)}`;
+  const hasLocalhost = (editedUrl || shareUrl).includes('localhost') || (editedUrl || shareUrl).includes('127.0.0.1');
 
   if (!isOpen) return null;
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(shareUrl);
+    navigator.clipboard.writeText(editedUrl || shareUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -120,7 +127,7 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, playlist }) =>
                 <span className="text-gray-400 text-sm font-medium">{window.location.origin}{window.location.pathname}?id=</span>
                 <div className="bg-blue-600 px-6 py-3 rounded-2xl shadow-2xl shadow-blue-600/50 border-2 border-blue-400">
                   <span className="text-white text-3xl font-black tracking-[0.3em] font-mono">
-                    {shareUrl.split('id=')[1]?.split('#')[0] || '------'}
+                    {(editedUrl || shareUrl).split('id=')[1]?.split('#')[0] || '------'}
                   </span>
                 </div>
                 <span className="text-gray-400 text-sm font-medium">#display</span>
@@ -130,15 +137,35 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, playlist }) =>
           </div>
 
           <div className="space-y-4">
+             {/* Aviso se usar localhost */}
+             {hasLocalhost && (
+               <div className="bg-yellow-600/10 border border-yellow-500/30 rounded-2xl p-4 flex gap-3 items-start">
+                 <div className="w-8 h-8 rounded-xl bg-yellow-600/20 flex items-center justify-center shrink-0">
+                   <svg className="w-4 h-4 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                     <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                   </svg>
+                 </div>
+                 <div>
+                   <p className="text-yellow-400 text-xs font-bold mb-1">⚠️ Link Local Detectado</p>
+                   <p className="text-yellow-300/70 text-[10px] leading-relaxed">
+                     Este link usa <span className="font-mono bg-yellow-500/20 px-1 rounded">localhost</span> e só funciona neste computador. 
+                     Para acessar de outro dispositivo (TV), substitua <span className="font-mono">localhost</span> pelo IP da sua rede 
+                     (ex: <span className="font-mono bg-yellow-500/20 px-1 rounded">192.168.0.9</span>).
+                   </p>
+                 </div>
+               </div>
+             )}
+             
              <div className="relative flex items-center group">
                 <div className="absolute left-5 text-blue-500 group-hover:scale-110 transition-transform">
                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 </div>
                 <input 
-                  readOnly
                   type="text" 
-                  value={shareUrl}
-                  className="w-full bg-[#161b22] border border-white/10 rounded-2xl py-6 pl-16 pr-36 text-sm font-mono transition-all cursor-text select-all text-white focus:ring-2 focus:ring-blue-500/50"
+                  value={editedUrl}
+                  onChange={(e) => setEditedUrl(e.target.value)}
+                  placeholder="Cole ou edite o link aqui..."
+                  className="w-full bg-[#161b22] border border-white/10 rounded-2xl py-6 pl-16 pr-36 text-sm font-mono transition-all text-white focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50"
                 />
                 <button 
                   type="button"

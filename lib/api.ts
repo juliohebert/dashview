@@ -21,7 +21,9 @@ export const midiasService = {
   // Buscar todas as mídias
   async getAll(): Promise<PlaylistItem[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/midias`);
+      const response = await fetch(`${API_BASE_URL}/midias`, {
+        headers: getAuthHeaders()
+      });
       if (!response.ok) throw new Error('API error');
       const data = await response.json();
       console.log('✅ Mídias carregadas da API:', data.length);
@@ -107,6 +109,63 @@ export const midiasService = {
 };
 
 // Serviços de Links (Compartilhamento)
+// Função para detectar IP local usando WebRTC
+const getLocalIP = async (): Promise<string | null> => {
+  return new Promise((resolve) => {
+    const rtc = new RTCPeerConnection({ iceServers: [] });
+    rtc.createDataChannel('');
+    
+    rtc.onicecandidate = (event) => {
+      if (!event || !event.candidate) {
+        rtc.close();
+        return;
+      }
+      
+      const candidate = event.candidate.candidate;
+      const ipRegex = /([0-9]{1,3}\.){3}[0-9]{1,3}/;
+      const match = candidate.match(ipRegex);
+      
+      if (match && !match[0].startsWith('127.')) {
+        resolve(match[0]);
+        rtc.close();
+      }
+    };
+    
+    rtc.createOffer()
+      .then(offer => rtc.setLocalDescription(offer))
+      .catch(() => resolve(null));
+    
+    // Timeout após 2 segundos
+    setTimeout(() => {
+      rtc.close();
+      resolve(null);
+    }, 2000);
+  });
+};
+
+// Função auxiliar para obter URL base correta (IP da rede para compartilhamento com TV)
+const getShareableBaseUrl = async (): Promise<string> => {
+  const origin = window.location.origin;
+  const pathname = window.location.pathname;
+  const port = window.location.port;
+  
+  // Se estiver em localhost, tentar usar o IP da rede
+  if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+    const localIP = await getLocalIP();
+    
+    if (localIP) {
+      const protocol = window.location.protocol;
+      const newOrigin = `${protocol}//${localIP}${port ? ':' + port : ''}`;
+      console.log(`✅ IP da rede detectado: ${localIP}`);
+      return newOrigin + pathname;
+    }
+    
+    console.warn('⚠️ Não foi possível detectar IP da rede. Usando localhost.');
+  }
+  
+  return origin + pathname;
+};
+
 export const linksService = {
   // Criar link curto
   async create(codigo: string, playlist: PlaylistItem[]): Promise<{ codigoCurto: string; url: string }> {
@@ -119,7 +178,7 @@ export const linksService = {
       
       if (!response.ok) throw new Error('API error');
       
-      const baseUrl = window.location.origin + window.location.pathname;
+      const baseUrl = await getShareableBaseUrl();
       console.log('✅ Link salvo no banco:', codigo);
       
       return {
@@ -131,7 +190,7 @@ export const linksService = {
       localStorage.setItem(`playlist_${codigo}`, JSON.stringify(playlist));
       localStorage.setItem(`playlist_${codigo}_created`, Date.now().toString());
       
-      const baseUrl = window.location.origin + window.location.pathname;
+      const baseUrl = await getShareableBaseUrl();
       return {
         codigoCurto: codigo,
         url: `${baseUrl}?id=${codigo}#display`

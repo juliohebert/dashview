@@ -123,13 +123,14 @@ export default defineConfig(({ mode }) => {
                     
                     const result = await sql`
                       INSERT INTO midias (
-                        tenant_id, titulo, anunciante, tipo, duracao, url_midia, thumbnail, agendamento
+                        tenant_id, titulo, anunciante, tipo, duracao, status, url_midia, thumbnail, agendamento
                       ) VALUES (
                         ${tenantId},
                         ${title},
                         ${advertiser},
                         ${type},
                         ${duration},
+                        'Ativo',
                         ${mediaUrl},
                         ${thumbnail || null},
                         ${schedule ? JSON.stringify(schedule) : null}
@@ -277,8 +278,7 @@ export default defineConfig(({ mode }) => {
                       INSERT INTO links_compartilhamento (codigo_curto, dados_playlist, tenant_id)
                       VALUES (${codigo}, ${JSON.stringify(playlist)}, ${tenantId})
                       ON CONFLICT (codigo_curto) DO UPDATE 
-                      SET dados_playlist = ${JSON.stringify(playlist)},
-                          criado_em = NOW()
+                      SET dados_playlist = ${JSON.stringify(playlist)}
                     `;
                     
                     res.statusCode = 201;
