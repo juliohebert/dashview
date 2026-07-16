@@ -20,3 +20,18 @@ View your app in AI Studio: https://ai.studio/apps/f563652d-6f0d-4d61-8887-59b1b
 2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
 3. Run the app:
    `npm run dev`
+## Testar Links Compartilhados Localmente
+
+Para testar a funcionalidade de links compartilhados em desenvolvimento, você precisa usar o Vercel CLI:
+
+```bash
+# Instalar Vercel CLI globalmente (uma vez)
+npm i -g vercel
+
+# Rodar com Vercel Dev (simula ambiente de produção)
+vercel dev
+```
+
+**Diferença:**
+- `npm run dev` - Apenas frontend (links compartilhados NÃO funcionam)
+- `vercel dev` - Frontend + API serverless (links compartilhados funcionam)

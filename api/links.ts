@@ -1,13 +1,12 @@
 import { neon } from '@neondatabase/serverless';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { validateToken } from './auth/middleware';
 
 const sql = neon(process.env.DATABASE_URL!);
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // CORS headers
+  // CORS headers - permitir todas origens
   res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
 
@@ -16,10 +15,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    // Validar autenticação
-    const session = validateToken(req);
-    const tenantId = session.tenantId;
-
     if (req.method === 'POST') {
       const { codigo, playlist } = req.body;
 
@@ -27,13 +22,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ error: 'Código e playlist são obrigatórios' });
       }
 
+      console.log(`📝 Criando link compartilhado: ${codigo}`);
+
+      // Inserir link SEM autenticação - totalmente público
       await sql`
-        INSERT INTO links_compartilhamento (codigo_curto, dados_playlist, tenant_id)
-        VALUES (${codigo}, ${JSON.stringify(playlist)}, ${tenantId})
+        INSERT INTO links_compartilhamento (codigo_curto, dados_playlist)
+        VALUES (${codigo}, ${JSON.stringify(playlist)})
         ON CONFLICT (codigo_curto) DO UPDATE 
         SET dados_playlist = ${JSON.stringify(playlist)},
-            criado_em = NOW()
+            data_criacao = NOW()
       `;
+
+      console.log(`✅ Link criado com sucesso: ${codigo}`);
 
       return res.status(201).json({ 
         codigoCurto: codigo,
@@ -43,12 +43,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     return res.status(405).json({ error: 'Método não permitido' });
   } catch (error) {
-    console.error('Erro na API /links:', error);
-    
-    // Erro de autenticação
-    if (error instanceof Error && (error.message.includes('Token') || error.message.includes('Sessão'))) {
-      return res.status(401).json({ error: error.message });
-    }
+    console.error('❌ Erro na API /links:', error);
     
     return res.status(500).json({ 
       error: 'Erro ao processar requisição',
@@ -56,4 +51,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   }
 }
+
 

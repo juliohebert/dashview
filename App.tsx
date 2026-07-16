@@ -21,6 +21,13 @@ const AppContent: React.FC = () => {
   const [playlist, setPlaylist] = useState<PlaylistItem[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Verificar se está em modo Display compartilhado (não requer autenticação)
+  const isSharedDisplayMode = () => {
+    const params = new URLSearchParams(window.location.search);
+    const hash = window.location.hash;
+    return (params.get('id') || params.get('p') || params.get('mode')) && hash === '#display';
+  };
+
   // Carregar playlist ao iniciar
   useEffect(() => {
     loadPlaylist();
@@ -39,6 +46,7 @@ const AppContent: React.FC = () => {
         try {
           const response = await linksService.getByCode(shortId);
           setPlaylist(response.playlist);
+          console.log(`✅ Playlist compartilhada carregada: ${response.playlist.length} itens`);
           setLoading(false);
           return;
         } catch (error) {
@@ -47,9 +55,11 @@ const AppContent: React.FC = () => {
           const storedPlaylist = localStorage.getItem(`playlist_${shortId}`);
           if (storedPlaylist) {
             setPlaylist(JSON.parse(storedPlaylist));
+            console.log('✅ Playlist carregada do localStorage');
             setLoading(false);
             return;
           }
+          console.error('❌ Link não encontrado no servidor nem no localStorage');
         }
       }
       
@@ -116,7 +126,19 @@ const AppContent: React.FC = () => {
     );
   }
 
-  // Tela de autenticação
+  // Modo Display compartilhado não requer autenticação
+  if (isSharedDisplayMode()) {
+    return (
+      <div className="w-full h-screen bg-black text-white overflow-hidden selection:bg-blue-500/30">
+        <DisplayView 
+          playlist={playlist} 
+          onPlaylistUpdate={setPlaylist}
+        />
+      </div>
+    );
+  }
+
+  // Tela de autenticação (apenas para Dashboard)
   if (!isAuthenticated) {
     if (showRegister) {
       return (

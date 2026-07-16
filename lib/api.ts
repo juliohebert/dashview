@@ -167,16 +167,22 @@ const getShareableBaseUrl = async (): Promise<string> => {
 };
 
 export const linksService = {
-  // Criar link curto
+  // Criar link curto (SEM autenticação - público)
   async create(codigo: string, playlist: PlaylistItem[]): Promise<{ codigoCurto: string; url: string }> {
     try {
       const response = await fetch(`${API_BASE_URL}/links`, {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({ codigo, playlist })
       });
       
-      if (!response.ok) throw new Error('API error');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('❌ Erro ao criar link:', response.status, errorData);
+        throw new Error('API error');
+      }
       
       const baseUrl = await getShareableBaseUrl();
       console.log('✅ Link salvo no banco:', codigo);
@@ -186,7 +192,7 @@ export const linksService = {
         url: `${baseUrl}?id=${codigo}#display`
       };
     } catch (error) {
-      console.warn('API indisponível, usando localStorage:', error);
+      console.warn('⚠️ API indisponível, usando localStorage:', error);
       localStorage.setItem(`playlist_${codigo}`, JSON.stringify(playlist));
       localStorage.setItem(`playlist_${codigo}_created`, Date.now().toString());
       
@@ -209,8 +215,14 @@ export const linksService = {
       return data;
     } catch (error) {
       console.warn('API indisponível, usando localStorage:', error);
+      console.warn('💡 Dica: Para testar links compartilhados localmente, use "vercel dev" ao invés de "npm run dev"');
+      
       const data = localStorage.getItem(`playlist_${codigo}`);
-      if (!data) throw new Error('Link não encontrado');
+      if (!data) {
+        console.error('❌ Link não encontrado no localStorage. Playlist não disponível.');
+        throw new Error('Link não encontrado');
+      }
+      console.log('✅ Link carregado do localStorage (fallback)');
       return { playlist: JSON.parse(data) };
     }
   },
